@@ -1,56 +1,259 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Bars Kombat</title>
     <meta charset="UTF-8">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <title>Bars Kombat</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap" rel="stylesheet">
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            text-align: center; 
-            background: #f5f5f5;
-            padding: 20px;
-        }
-        #bars { 
-            width: 200px; 
-            cursor: pointer; 
-            transition: transform 0.1s;
-        }
-        #coins { 
-            font-size: 24px; 
-            font-weight: bold; 
-            color: #e6b800;
-        }
-        button {
-            background: #4CAF50;
+        body {
+            margin: 0;
+            background: #0f0f1a;
             color: white;
-            border: none;
-            padding: 10px 20px;
-            margin: 10px;
+            font-family: 'Montserrat', sans-serif;
+            text-align: center;
+            overflow-x: hidden;
+        }
+
+        .money {
+            font-size: 32px;
+            margin-top: 20px;
+        }
+
+        .level-bar {
+            width: 80%;
+            height: 10px;
+            background: #2e2e40;
             border-radius: 5px;
+            margin: 10px auto;
+            overflow: hidden;
+        }
+
+        .level-progress {
+            width: 30%;
+            height: 100%;
+            background: linear-gradient(90deg, #32c4ff, #9e6eff);
+        }
+
+        .rank {
+            font-size: 16px;
+            color: #ccc;
+        }
+
+        .circle {
+            margin: 30px auto;
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: radial-gradient(circle at center, #1c1c2e, #10101a);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .bars-img {
+            width: 250px;
+            height: 250px;
+            object-fit: cover;
+            border-radius: 50%;
+            transition: transform 0.1s ease;
+            box-shadow: 0 0 10px rgba(255,255,255,0.1);
             cursor: pointer;
+        }
+
+        .floating-coin {
+            position: absolute;
+            color: gold;
+            font-size: 20px;
+            animation: floatUp 0.8s ease-out forwards;
+            left: 50%;
+            transform: translateX(-50%);
+            pointer-events: none;
+        }
+
+        @keyframes floatUp {
+            0% { bottom: 20px; opacity: 1; }
+            100% { bottom: 100px; opacity: 0; }
+        }
+
+        .bottom-menu {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #1c1c2e;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            border-top: 1px solid #333;
+        }
+
+        .menu-item {
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .menu-item:hover {
+            color: #32c4ff;
+        }
+
+        /* Модалка */
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #2c2c3f;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+            color: white;
+            width: 80%;
+            max-width: 300px;
+            z-index: 1000;
+        }
+
+        .modal h2 {
+            margin-top: 0;
+        }
+
+        .modal button {
+            margin-top: 10px;
+            padding: 8px 12px;
+            background: #27ae60;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            z-index: 999;
         }
     </style>
 </head>
 <body>
-    <h1>Bars Kombat 🐆</h1>
-    <p>Тыкай на барса и получай монеты!</p>
-    <img id="bars" src="https://i.imgur.com/ваша-картинка.png" alt="Барс">
-    <p id="coins">💰 Монеты: 0</p>
-    <button onclick="alert('Задание: 2+2=? Ответь боту!')">📝 Задания</button>
-    <button onclick="alert('Топ игроков: 1. Ты – 0 монет')">🏆 Рейтинг</button>
+    <div class="money">💰 <span id="coins">0</span></div>
+    <div class="rank">Bronze | Уровень 1</div>
+
+    <div class="level-bar">
+        <div class="level-progress" id="progress"></div>
+    </div>
+
+    <div class="circle" id="circle">
+        <img src="https://i.ibb.co/k6V4BhbZ/image.png" class="bars-img" id="bars">
+    </div>
+
+    <!-- Модалка -->
+    <div class="overlay" id="overlay"></div>
+
+    <div class="modal" id="taskListModal">
+        <h2>📚 Задания</h2>
+        <div id="taskList"></div>
+        <button onclick="closeTaskList()">Закрыть</button>
+    </div>
+
+    <!-- Меню -->
+    <div class="bottom-menu">
+        <div class="menu-item" onclick="openTask()">📚 Задания</div>
+        <div class="menu-item" onclick="showLeaderboard()">🏆 Рейтинг</div>
+    </div>
 
     <script>
         let coins = 0;
-        const barsImg = document.getElementById('bars');
-        const coinsDisplay = document.getElementById('coins');
+        const maxEnergy = 1000;
+        const currentEnergy = 145;
+        const progressEl = document.getElementById("progress");
+        const circle = document.getElementById("circle");
 
-        barsImg.addEventListener('click', () => {
-            coins += 1;
-            coinsDisplay.textContent = `💰 Монеты: ${coins}`;
-            barsImg.style.transform = 'scale(0.95)';
-            setTimeout(() => { barsImg.style.transform = 'scale(1)'; }, 100);
+        progressEl.style.width = `${(currentEnergy / maxEnergy) * 100}%`;
+
+        document.getElementById("bars").addEventListener("click", () => {
+            coins++;
+            document.getElementById("coins").textContent = coins;
+
+            showFloatingCoin("+1");
+
+            // Отправка в Telegram
+            if (window.Telegram) {
+                Telegram.WebApp.sendData(JSON.stringify({
+                    action: "click",
+                    coins: coins
+                }));
+            }
         });
+
+        function showFloatingCoin(text) {
+            const el = document.createElement("div");
+            el.className = "floating-coin";
+            el.textContent = text;
+            circle.appendChild(el);
+            setTimeout(() => el.remove(), 800);
+        }
+
+        // --- Задания ---
+        const tasks = [
+            { q: "Сколько будет 2 + 2?", a: "4", reward: 20 },
+            { q: "5 × 3 = ?", a: "15", reward: 25 },
+            { q: "Столица России?", a: "Москва", reward: 30 },
+        ];
+
+        function openTask() {
+            const container = document.getElementById("taskList");
+            container.innerHTML = "";
+
+            tasks.forEach((task, index) => {
+                const div = document.createElement("div");
+                div.style.marginBottom = "10px";
+
+                div.innerHTML = `
+                    <div><b>${task.q}</b> — 💰 ${task.reward}</div>
+                    <input type="text" id="answer-${index}" placeholder="Ваш ответ">
+                    <button onclick="checkTaskAnswer(${index})">Ответить</button>
+                `;
+
+                container.appendChild(div);
+            });
+
+            document.getElementById("taskListModal").style.display = "block";
+            document.getElementById("overlay").style.display = "block";
+        }
+
+        function checkTaskAnswer(index) {
+            const input = document.getElementById(`answer-${index}`);
+            const answer = input.value.trim();
+            const task = tasks[index];
+
+            if (answer.toLowerCase() === task.a.toLowerCase()) {
+                coins += task.reward;
+                document.getElementById("coins").textContent = coins;
+                alert(`✅ Верно! +${task.reward} монет`);
+            } else {
+                alert("❌ Неправильно!");
+            }
+        }
+
+        function closeTaskList() {
+            document.getElementById("taskListModal").style.display = "none";
+            document.getElementById("overlay").style.display = "none";
+        }
+
+        function closeModal() {
+            document.getElementById("taskModal").style.display = "none";
+            document.getElementById("overlay").style.display = "none";
+        }
+
+        function showLeaderboard() {
+            alert("🏆 Топ игроков:\n1. Вы - " + coins + " монет\n(Пока локально)");
+        }
     </script>
 </body>
 </html>
