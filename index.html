@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bars Kombat</title>
+    <meta charset="UTF-8">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        #bars { 
+            width: 200px; 
+            cursor: pointer; 
+            transition: transform 0.1s;
+        }
+        #coins { 
+            font-size: 24px; 
+            font-weight: bold; 
+            color: #e6b800;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Bars Kombat 🐆</h1>
+    <p>Тыкай на барса и получай монеты!</p>
+    <img id="bars" src="https://i.imgur.com/ваша-картинка.png" alt="Барс">
+    <p id="coins">💰 Монеты: 0</p>
+    <button onclick="alert('Задание: 2+2=? Ответь боту!')">📝 Задания</button>
+    <button onclick="alert('Топ игроков: 1. Ты – 0 монет')">🏆 Рейтинг</button>
+
+    <script>
+        let coins = 0;
+        const barsImg = document.getElementById('bars');
+        const coinsDisplay = document.getElementById('coins');
+
+        barsImg.addEventListener('click', () => {
+            coins += 1;
+            coinsDisplay.textContent = `💰 Монеты: ${coins}`;
+            barsImg.style.transform = 'scale(0.95)';
+            setTimeout(() => { barsImg.style.transform = 'scale(1)'; }, 100);
+        });
+    </script>
+</body>
+</html>
