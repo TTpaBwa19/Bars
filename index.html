@@ -115,8 +115,8 @@
             border-radius: 10px;
             display: none;
             color: white;
-            width: 80%;
-            max-width: 400px;
+            width: 90%;
+            max-width: 500px;
             z-index: 1000;
             overflow-y: auto;
             max-height: 80%;
@@ -138,19 +138,6 @@
             width: 100%;
         }
 
-        .modal .leaderboard-list {
-            max-height: 300px;
-            overflow-y: auto;
-            margin-top: 20px;
-        }
-
-        .modal .leaderboard-item {
-            padding: 10px;
-            border-bottom: 1px solid #333;
-            display: flex;
-            justify-content: space-between;
-        }
-
         .overlay {
             position: fixed;
             top: 0;
@@ -160,6 +147,38 @@
             background: rgba(0,0,0,0.5);
             display: none;
             z-index: 999;
+        }
+
+        /* Стили для таблицы лидеров */
+        .leaderboard {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: Arial, sans-serif;
+            margin: 20px 0;
+            color: white;
+        }
+
+        .leaderboard th, .leaderboard td {
+            border: 1px solid #444;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .leaderboard thead {
+            background-color: #2a2a3a;
+        }
+
+        .leaderboard tbody tr:nth-child(even) {
+            background-color: #252535;
+        }
+
+        .leaderboard tbody tr:hover {
+            background-color: #1e2b3e;
+        }
+
+        .leaderboard td:first-child {
+            font-weight: bold;
+            font-size: 1.2em;
         }
     </style>
 </head>
@@ -182,7 +201,18 @@
     <!-- Модалка рейтинга -->
     <div class="modal" id="leaderboardModal">
         <h2>🏆 Рейтинг</h2>
-        <div id="leaderboardList" class="leaderboard-list"></div>
+        <table class="leaderboard">
+            <thead>
+                <tr>
+                    <th>Место</th>
+                    <th>Пользователь</th>
+                    <th>Монеты</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboard-body">
+                <!-- Строки рейтинга будут добавлены здесь динамически -->
+            </tbody>
+        </table>
         <button onclick="closeLeaderboard()">Закрыть</button>
     </div>
 
@@ -365,20 +395,37 @@
                 fetch("http://127.0.0.1:5000/leaderboard")
                     .then(response => response.json())
                     .then(data => {
-                        const leaderboardList = document.getElementById("leaderboardList");
-                        leaderboardList.innerHTML = "";
-
+                        const tbody = document.getElementById('leaderboard-body');
+                        tbody.innerHTML = '';
+                        
                         data.forEach((user, index) => {
-                            const item = document.createElement("div");
-                            item.className = "leaderboard-item";
+                            const tr = document.createElement('tr');
+                            const medal = getMedal(index + 1);
                             const displayName = user.username || `Пользователь ${user.user_id}`;
-                            item.innerHTML = `<span>#${index + 1}. ${displayName}</span><span>💰 ${user.coins}</span>`;
-                            leaderboardList.appendChild(item);
+                            tr.innerHTML = `
+                                <td>${medal}</td>
+                                <td>${displayName}</td>
+                                <td>${user.coins}</td>
+                            `;
+                            tbody.appendChild(tr);
                         });
 
                         modal.style.display = "block";
                         overlay.style.display = "block";
+                    })
+                    .catch(error => {
+                        console.error("Ошибка загрузки рейтинга:", error);
+                        alert("Не удалось загрузить рейтинг");
                     });
+            }
+        }
+
+        function getMedal(position) {
+            switch (position) {
+                case 1: return '🥇';
+                case 2: return '🥈';
+                case 3: return '🥉';
+                default: return position;
             }
         }
 
