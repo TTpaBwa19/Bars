@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Bars Kombat</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap" rel="stylesheet">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
             margin: 0;
@@ -200,7 +201,7 @@
     <script>
         let coins = 0;
         let username = "Неизвестно";
-        const user_id = 123456; // ← замени на Telegram.WebApp.initDataUnsafe.user.id в проде
+        let user_id = null;
 
         const maxEnergy = 1000;
         const currentEnergy = 145;
@@ -209,30 +210,73 @@
 
         progressEl.style.width = `${(currentEnergy / maxEnergy) * 100}%`;
 
-        // Загрузка данных пользователя при старте
-        window.addEventListener("DOMContentLoaded", () => {
+        // Инициализация Telegram WebApp
+        window.addEventListener('load', function() {
+            if (window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe) {
+                const tgUser = Telegram.WebApp.initDataUnsafe.user;
+                if (tgUser) {
+                    user_id = tgUser.id;
+                    username = tgUser.username || `Пользователь ${tgUser.id}`;
+                    
+                    // Обновляем никнейм на сервере
+                    fetch('http://localhost:5000/update_username', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            user_id: user_id,
+                            username: username
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            console.log("Никнейм обновлен успешно");
+                        } else {
+                            console.log("Ошибка обновления никнейма");
+                        }
+                    })
+                    .catch(error => console.error("Ошибка запроса:", error));
+
+                    // Загружаем данные пользователя
+                    loadUserData();
+                }
+            } else {
+                // Режим разработки (если не в Telegram WebApp)
+                user_id = 123456;
+                username = "Тестовый пользователь";
+                document.getElementById("username").textContent = username;
+                loadUserData();
+            }
+        });
+
+        function loadUserData() {
             fetch(`http://localhost:5000/get_coins?user_id=${user_id}`)
                 .then(res => res.json())
                 .then(data => {
                     coins = data.coins || 0;
                     document.getElementById("coins").textContent = coins;
 
-                    username = data.username || "Неизвестно";
+                    // Используем username с сервера, если он есть
+                    if (data.username) {
+                        username = data.username;
+                    }
                     document.getElementById("username").textContent = username;
                     
                     console.log("Данные пользователя загружены:", { coins, username });
                 })
                 .catch(err => console.error("Ошибка загрузки данных:", err));
-        });
+        }
 
         document.getElementById("bars").addEventListener("click", () => {
             coins++;
             document.getElementById("coins").textContent = coins;
             showFloatingCoin("+1");
-            saveCoinsToServer(); // сохранение монет
+            saveUserData();
         });
 
-        function saveCoinsToServer() {
+        function saveUserData() {
             fetch("http://localhost:5000/update_coins", {
                 method: "POST",
                 headers: {
@@ -241,7 +285,7 @@
                 body: JSON.stringify({
                     user_id: user_id,
                     coins: coins,
-                    username: username // отправляем username на сервер при сохранении
+                    username: username
                 })
             })
             .then(res => res.json())
@@ -299,7 +343,7 @@
                 coins += task.reward;
                 document.getElementById("coins").textContent = coins;
                 alert(`✅ Верно! +${task.reward} монет`);
-                saveCoinsToServer(); // сохраняем после задания
+                saveUserData();
             } else {
                 alert("❌ Неправильно!");
             }
@@ -327,7 +371,8 @@
                         data.forEach((user, index) => {
                             const item = document.createElement("div");
                             item.className = "leaderboard-item";
-                            item.innerHTML = `<span>#${index + 1}. ${user.username || `Пользователь ${user.user_id}`}</span><span>💰 ${user.coins}</span>`;
+                            const displayName = user.username || `Пользователь ${user.user_id}`;
+                            item.innerHTML = `<span>#${index + 1}. ${displayName}</span><span>💰 ${user.coins}</span>`;
                             leaderboardList.appendChild(item);
                         });
 
