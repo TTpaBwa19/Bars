@@ -192,6 +192,8 @@
 
     <script>
         let coins = 0;
+        const user_id = 123456; // ← замени на Telegram.WebApp.initDataUnsafe.user.id в проде
+
         const maxEnergy = 1000;
         const currentEnergy = 145;
         const progressEl = document.getElementById("progress");
@@ -199,11 +201,47 @@
 
         progressEl.style.width = `${(currentEnergy / maxEnergy) * 100}%`;
 
+        // Загрузка монет при старте
+        window.addEventListener("DOMContentLoaded", () => {
+            fetch(`http://localhost:5000/get_coins?user_id=${user_id}`)
+                .then(res => res.json())
+                .then(data => {
+                    coins = data.coins || 0;
+                    document.getElementById("coins").textContent = coins;
+                })
+                .catch(err => console.error("Ошибка загрузки монет:", err));
+        });
+
         document.getElementById("bars").addEventListener("click", () => {
             coins++;
             document.getElementById("coins").textContent = coins;
             showFloatingCoin("+1");
+            saveCoinsToServer(); // сохранение монет
         });
+
+        function saveCoinsToServer() {
+            fetch("http://localhost:5000/update_coins", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    user_id: user_id,
+                    coins: coins
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    console.log("Монеты сохранены");
+                } else {
+                    console.error("Ошибка сохранения:", data.error);
+                }
+            })
+            .catch(err => {
+                console.error("Сервер недоступен:", err);
+            });
+        }
 
         function showFloatingCoin(text) {
             const el = document.createElement("div");
@@ -247,105 +285,7 @@
                 coins += task.reward;
                 document.getElementById("coins").textContent = coins;
                 alert(`✅ Верно! +${task.reward} монет`);
-            } else {
-                alert("❌ Неправильно!");
-            }
-        }
-
-        function closeTaskList() {
-            document.getElementById("taskListModal").style.display = "none";
-            document.getElementById("overlay").style.display = "none";
-        }
-
-        function toggleLeaderboard() {
-            const modal = document.getElementById("leaderboardModal");
-            const overlay = document.getElementById("overlay");
-
-            if (modal.style.display === "block") {
-                modal.style.display = "none";
-                overlay.style.display = "none";
-            } else {
-                fetch("http://127.0.0.1:5000/leaderboard")
-                    .then(response => response.json())
-                    .then(data => {
-                        const leaderboardList = document.getElementById("leaderboardList");
-                        leaderboardList.innerHTML = "";
-
-                        data.forEach((user, index) => {
-                            const item = document.createElement("div");
-                            item.className = "leaderboard-item";
-                            item.innerHTML = `<span>#${index + 1}. ${user.name}</span><span>💰 ${user.coins}</span>`;
-                            leaderboardList.appendChild(item);
-                        });
-
-                        modal.style.display = "block";
-                        overlay.style.display = "block";
-                    });
-            }
-        }
-
-        function closeLeaderboard() {
-            document.getElementById("leaderboardModal").style.display = "none";
-            document.getElementById("overlay").style.display = "none";
-        }
-        function saveCoinsToServer() {
-            fetch("http://localhost:5000/update_coins", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    user_id: user_id,
-                    coins: coins
-                })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (!data.success) {
-                    console.error("Ошибка сохранения:", data.error);
-                }
-            })
-            .catch(err => {
-                console.error("Сервер недоступен:", err);
-            });
-        }
-
-        function showFloatingCoin(text) {
-            const el = document.createElement("div");
-            el.className = "floating-coin";
-            el.textContent = text;
-            circle.appendChild(el);
-            setTimeout(() => el.remove(), 800);
-        }
-function openTask() {
-            const container = document.getElementById("taskList");
-            container.innerHTML = "";
-
-            tasks.forEach((task, index) => {
-                const div = document.createElement("div");
-                div.style.marginBottom = "10px";
-                div.innerHTML = `
-                    <div><b>${task.q}</b> — 💰 ${task.reward}</div>
-                    <input type="text" id="answer-${index}" placeholder="Ваш ответ">
-                    <button onclick="checkTaskAnswer(${index})">Ответить</button>
-                `;
-                container.appendChild(div);
-            });
-
-            document.getElementById("taskListModal").style.display = "block";
-            document.getElementById("overlay").style.display = "block";
-        }
-
-        function checkTaskAnswer(index) {
-            const input = document.getElementById(`answer-${index}`);
-            const answer = input.value.trim();
-            const task = tasks[index];
-
-            if (answer.toLowerCase() === task.a.toLowerCase()) {
-                coins += task.reward;
-                document.getElementById("coins").textContent = coins;
-                alert(`✅ Верно! +${task.reward} монет`);
-                saveCoinsToServer();
+                saveCoinsToServer(); // сохраняем после задания
             } else {
                 alert("❌ Неправильно!");
             }
