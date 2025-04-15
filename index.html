@@ -98,7 +98,6 @@
             color: #32c4ff;
         }
 
-        /* Модалка */
         .modal {
             position: fixed;
             top: 50%;
@@ -174,15 +173,13 @@
         const progressEl = document.getElementById("progress");
         const circle = document.getElementById("circle");
 
-        progressEl.style.width = `${(currentEnergy / maxEnergy) * 100}%`;
+        progressEl.style.width = (currentEnergy / maxEnergy * 100) + "%";
 
         document.getElementById("bars").addEventListener("click", () => {
             coins++;
             document.getElementById("coins").textContent = coins;
-
             showFloatingCoin("+1");
 
-            // Отправка в Telegram
             if (window.Telegram) {
                 Telegram.WebApp.sendData(JSON.stringify({
                     action: "click",
@@ -199,7 +196,6 @@
             setTimeout(() => el.remove(), 800);
         }
 
-        // --- Задания ---
         const tasks = [
             { q: "Сколько будет 2 + 2?", a: "4", reward: 20 },
             { q: "5 × 3 = ?", a: "15", reward: 25 },
@@ -219,7 +215,6 @@
                     <input type="text" id="answer-${index}" placeholder="Ваш ответ">
                     <button onclick="checkTaskAnswer(${index})">Ответить</button>
                 `;
-
                 container.appendChild(div);
             });
 
@@ -236,6 +231,13 @@
                 coins += task.reward;
                 document.getElementById("coins").textContent = coins;
                 alert(`✅ Верно! +${task.reward} монет`);
+
+                if (window.Telegram) {
+                    Telegram.WebApp.sendData(JSON.stringify({
+                        action: "click",
+                        coins: coins
+                    }));
+                }
             } else {
                 alert("❌ Неправильно!");
             }
@@ -246,29 +248,12 @@
             document.getElementById("overlay").style.display = "none";
         }
 
-        function closeModal() {
-            document.getElementById("taskModal").style.display = "none";
-            document.getElementById("overlay").style.display = "none";
-        }
-
-        // Функция для получения и отображения рейтинга
         function showLeaderboard() {
-            fetch("https://api.telegram.org/botYOUR_BOT_TOKEN/getUpdates")
-            .then(response => response.json())
-            .then(data => {
-                // Примерный формат данных: {result: [{message: {text, from}}]}
-                let leaderboard = "🏆 Топ 100 игроков:\n";
-                const users = data.result; // Ваши данные о пользователях (может потребоваться обработка)
-
-                // Пример вывода списка игроков
-                users.forEach((user, index) => {
-                    leaderboard += `${index + 1}. ${user.from.username} - ${user.message.text}\n`;
-                });
-
-                // Отображаем рейтинг в модалке
-                alert(leaderboard);
-            })
-            .catch(error => console.error("Ошибка при получении рейтинга: ", error));
+            if (window.Telegram) {
+                Telegram.WebApp.sendData(JSON.stringify({
+                    action: "get_top"
+                }));
+            }
         }
     </script>
 </body>
