@@ -138,30 +138,6 @@
             display: none;
             z-index: 999;
         }
-
-        table {
-            width: 80%;
-            margin: 20px auto;
-            border-collapse: collapse;
-            color: #fff;
-            background-color: #2e2e40;
-        }
-
-        table, th, td {
-            border: 1px solid #555;
-        }
-
-        th, td {
-            padding: 10px;
-        }
-
-        th {
-            background-color: #444;
-        }
-
-        td {
-            text-align: center;
-        }
     </style>
 </head>
 <body>
@@ -191,8 +167,6 @@
         <div class="menu-item" onclick="showLeaderboard()">🏆 Рейтинг</div>
     </div>
 
-    <div id="leaderboard-container"></div>
-
     <script>
         let coins = 0;
         const maxEnergy = 1000;
@@ -200,8 +174,7 @@
         const progressEl = document.getElementById("progress");
         const circle = document.getElementById("circle");
 
-        progressEl.style.width = (currentEnergy / maxEnergy) * 100 + '%';
-
+        progressEl.style.width = ${(currentEnergy / maxEnergy) * 100}%;
 
         document.getElementById("bars").addEventListener("click", () => {
             coins++;
@@ -242,10 +215,10 @@
                 div.style.marginBottom = "10px";
 
                 div.innerHTML = 
-                    `<div><b>${task.q}</b> — 💰 ${task.reward}</div>
+                    <div><b>${task.q}</b> — 💰 ${task.reward}</div>
                     <input type="text" id="answer-${index}" placeholder="Ваш ответ">
                     <button onclick="checkTaskAnswer(${index})">Ответить</button>
-                `;
+                ;
 
                 container.appendChild(div);
             });
@@ -255,14 +228,14 @@
         }
 
         function checkTaskAnswer(index) {
-            const input = document.getElementById(`answer-${index}`);
+            const input = document.getElementById(answer-${index});
             const answer = input.value.trim();
             const task = tasks[index];
 
             if (answer.toLowerCase() === task.a.toLowerCase()) {
                 coins += task.reward;
                 document.getElementById("coins").textContent = coins;
-                alert(`✅ Верно! +${task.reward} монет`);
+                alert(✅ Верно! +${task.reward} монет);
             } else {
                 alert("❌ Неправильно!");
             }
@@ -273,71 +246,14 @@
             document.getElementById("overlay").style.display = "none";
         }
 
-        // Функция для получения данных с сервера
-        async function fetchLeaderboard() {
-            try {
-                // Запрос к API для получения данных
-                const response = await fetch("http://127.0.0.1:5000/leaderboard");
-                const leaderboardData = await response.json();
-
-                if (leaderboardData.length === 0) {
-                    document.getElementById('leaderboard-container').innerHTML = "<p>Нет данных о игроках</p>";
-                    return;
-                }
-
-                // Создание таблицы с данными
-                let tableHTML = `
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Ранг</th>
-                                <th>ID Игрока</th>
-                                <th>Монеты</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                `;
-
-                leaderboardData.forEach((player, index) => {
-                    tableHTML += `
-                        <tr>
-                            <td>${index + 1}</td>
-                            <td>${player.user_id}</td>
-                            <td>${player.coins}</td>
-                        </tr>
-                    `;
-                });
-
-                tableHTML += "</tbody></table>";
-
-                // Вставляем таблицу в контейнер
-                document.getElementById('leaderboard-container').innerHTML = tableHTML;
-            } catch (error) {
-                console.error("Ошибка при загрузке данных:", error);
-                document.getElementById('leaderboard-container').innerHTML = "<p>Ошибка при загрузке данных. Попробуйте позже.</p>";
-            }
+        function closeModal() {
+            document.getElementById("taskModal").style.display = "none";
+            document.getElementById("overlay").style.display = "none";
         }
 
         function showLeaderboard() {
-    fetch("http://127.0.0.1:5000/leaderboard")
-        .then(response => response.json())
-        .then(data => {
-            let leaderboardText = "🏆 Топ игроков:\n";
-            data.forEach((user, index) => {
-                leaderboardText += `${index + 1}. User ${user.user_id} — ${user.coins} монет\n`;
-            });
-
-            alert(leaderboardText);
-        })
-        .catch(error => {
-            alert("Ошибка загрузки рейтинга");
-            console.error(error);
-        });
-}
-        
+            alert("🏆 Топ игроков:\n1. Вы - " + coins + " монет\n(Пока локально)");
+        }
     </script>
-
 </body>
-</html>
-
-
+</html> 
