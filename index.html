@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <title>Bars Kombat</title>
@@ -169,66 +169,63 @@
         }
 
         .task {
-            margin-bottom: 15px;
-            padding: 15px;
             background: #252535;
-            border-radius: 8px;
-            position: relative;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
         }
-        
-        .task-question {
-            font-weight: bold;
+
+        .task p {
+            font-size: 18px;
             margin-bottom: 10px;
         }
-        
-        .task-reward {
-            color: #f1c40f;
-            margin-bottom: 10px;
-        }
-        
-        .task-input {
-            padding: 8px 12px;
+
+        .task input {
+            padding: 10px;
+            font-size: 16px;
             width: 70%;
-            border-radius: 5px;
             border: 1px solid #444;
+            border-radius: 10px;
+            margin-right: 10px;
             background: #1c1c2e;
             color: white;
-            margin-right: 10px;
         }
-        
-        .task-button {
-            padding: 8px 15px;
-            background: #27ae60;
+
+        .task button {
+            padding: 10px 15px;
+            font-size: 16px;
+            background: #4CAF50;
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 10px;
             cursor: pointer;
         }
-        
+
+        .task button:hover {
+            background: #45a049;
+        }
+
         .task-status {
+            display: inline-block;
             margin-top: 10px;
-            padding: 8px;
-            border-radius: 5px;
-            text-align: center;
-            display: none;
+            font-weight: bold;
+            font-size: 16px;
         }
-        
+
         .task-completed {
-            background: rgba(46, 204, 113, 0.2);
             color: #2ecc71;
-            display: block;
         }
-        
+
         .task-failed {
-            background: rgba(231, 76, 60, 0.2);
             color: #e74c3c;
-            display: block;
         }
-        
-        .attempts-counter {
-            font-size: 12px;
-            color: #95a5a6;
+
+        .error-message {
+            color: #e74c3c;
+            font-size: 14px;
             margin-top: 5px;
+            display: none;
         }
 
         .overlay {
@@ -396,15 +393,73 @@
             setTimeout(() => el.remove(), 800);
         }
 
-        // Система заданий с ограничением попыток
-        const tasks = [
-            { id: 1, q: "Сколько будет 2 + 2?", a: "4", reward: 20 },
-            { id: 2, q: "5 × 3 = ?", a: "15", reward: 25 },
-            { id: 3, q: "Столица России?", a: "Москва", reward: 30 }
+        // Система заданий по дням недели
+        const allTasks = [
+            // День 1 (Воскресенье)
+            [
+                { id: 1, q: "Сколько будет 2 + 2?", a: "4", reward: 20 },
+                { id: 2, q: "5 × 3 = ?", a: "15", reward: 25 },
+                { id: 3, q: "Столица России?", a: "Москва", reward: 30 }
+            ],
+            // День 2 (Понедельник)
+            [
+                { id: 4, q: "Сколько будет 10 / 2?", a: "5", reward: 20 },
+                { id: 5, q: "Год основания Москвы?", a: "1147", reward: 30 },
+                { id: 6, q: "Что такое Python?", a: "Язык программирования", reward: 25 }
+            ],
+            // День 3 (Вторник)
+            [
+                { id: 7, q: "Какая планета самая большая?", a: "Юпитер", reward: 30 },
+                { id: 8, q: "Какой элемент таблицы Менделеева имеет символ H?", a: "Водород", reward: 20 },
+                { id: 9, q: "Какая страна имеет самую большую площадь?", a: "Россия", reward: 25 }
+            ],
+            // День 4 (Среда)
+            [
+                { id: 10, q: "Сколько океанов на Земле?", a: "5", reward: 20 },
+                { id: 11, q: "Какая страна в Южной Америке?", a: "Аргентина", reward: 25 },
+                { id: 12, q: "Сколько зубов у взрослого человека?", a: "32", reward: 30 }
+            ],
+            // День 5 (Четверг)
+            [
+                { id: 13, q: "Сколько секунд в минуте?", a: "60", reward: 20 },
+                { id: 14, q: "Что такое HTML?", a: "Язык разметки", reward: 25 },
+                { id: 15, q: "Самый глубокий океан?", a: "Тихий", reward: 30 }
+            ],
+            // День 6 (Пятница)
+            [
+                { id: 16, q: "Что такое алгоритм?", a: "Последовательность шагов", reward: 25 },
+                { id: 17, q: "Какой язык используется для веб-разработки?", a: "JavaScript", reward: 30 },
+                { id: 18, q: "Какой цвет у марса?", a: "Красный", reward: 20 }
+            ],
+            // День 7 (Суббота)
+            [
+                { id: 19, q: "Сколько лет длился Век Просвещения?", a: "100 лет", reward: 25 },
+                { id: 20, q: "Кто написал 'Войну и мир'?", a: "Лев Толстой", reward: 30 },
+                { id: 21, q: "Какая столица Великобритании?", a: "Лондон", reward: 20 }
+            ]
         ];
 
         const taskAttempts = JSON.parse(localStorage.getItem('taskAttempts')) || {};
         const taskCompleted = JSON.parse(localStorage.getItem('taskCompleted')) || {};
+        const lastUpdate = localStorage.getItem('lastUpdate');
+
+        function getDayTasks() {
+            const today = new Date();
+            const currentDay = today.getDay(); // 0 (воскресенье) до 6 (суббота)
+            
+            // Если день изменился, сбрасываем прогресс
+            if (lastUpdate && new Date(lastUpdate).getDate() !== today.getDate()) {
+                localStorage.setItem('lastUpdate', today.toISOString());
+                return allTasks[currentDay];
+            }
+            
+            // Если это первый запуск, сохраняем текущую дату
+            if (!lastUpdate) {
+                localStorage.setItem('lastUpdate', today.toISOString());
+            }
+            
+            return allTasks[currentDay];
+        }
 
         function openTask() {
             renderTasks();
@@ -416,6 +471,8 @@
             const container = document.getElementById("tasks-container");
             container.innerHTML = "";
 
+            const tasks = getDayTasks();
+
             tasks.forEach(task => {
                 const taskBlock = document.createElement("div");
                 taskBlock.className = "task";
@@ -423,13 +480,15 @@
 
                 // Основные элементы задания
                 taskBlock.innerHTML = `
-                    <div class="task-question">${task.q}</div>
+                    <p>${task.q}</p>
                     <div class="task-reward">Награда: ${task.reward} монет</div>
                     <div class="task-status" id="status-${task.id}"></div>
+                    <div class="error-message" id="error-${task.id}">Неверный ответ!</div>
                 `;
 
                 // Статус задания
                 const statusEl = taskBlock.querySelector(`#status-${task.id}`);
+                const errorEl = taskBlock.querySelector(`#error-${task.id}`);
 
                 if (taskCompleted[task.id]) {
                     // Задание уже выполнено
@@ -480,6 +539,12 @@
                         } else {
                             // Неправильный ответ
                             taskAttempts[task.id] = (taskAttempts[task.id] || 0) + 1;
+                            
+                            // Показываем сообщение об ошибке
+                            errorEl.style.display = "block";
+                            setTimeout(() => {
+                                errorEl.style.display = "none";
+                            }, 2000);
                             
                             if (taskAttempts[task.id] >= 3) {
                                 // Попытки закончились
