@@ -246,8 +246,29 @@
             document.getElementById("overlay").style.display = "none";
         }
 
+        function closeModal() {
+            document.getElementById("taskModal").style.display = "none";
+            document.getElementById("overlay").style.display = "none";
+        }
+
+        // Функция для получения и отображения рейтинга
         function showLeaderboard() {
-            alert("🏆 Топ игроков:\n1. Вы - " + coins + " монет\n(Пока локально)");
+            fetch("https://api.telegram.org/botYOUR_BOT_TOKEN/getUpdates")
+            .then(response => response.json())
+            .then(data => {
+                // Примерный формат данных: {result: [{message: {text, from}}]}
+                let leaderboard = "🏆 Топ 100 игроков:\n";
+                const users = data.result; // Ваши данные о пользователях (может потребоваться обработка)
+
+                // Пример вывода списка игроков
+                users.forEach((user, index) => {
+                    leaderboard += `${index + 1}. ${user.from.username} - ${user.message.text}\n`;
+                });
+
+                // Отображаем рейтинг в модалке
+                alert(leaderboard);
+            })
+            .catch(error => console.error("Ошибка при получении рейтинга: ", error));
         }
     </script>
 </body>
