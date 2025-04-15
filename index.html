@@ -200,7 +200,8 @@
         const progressEl = document.getElementById("progress");
         const circle = document.getElementById("circle");
 
-        progressEl.style.width = ${(currentEnergy / maxEnergy) * 100}%;
+        progressEl.style.width = (currentEnergy / maxEnergy) * 100 + '%';
+
 
         document.getElementById("bars").addEventListener("click", () => {
             coins++;
@@ -324,4 +325,5 @@
 
 </body>
 </html>
+
 
