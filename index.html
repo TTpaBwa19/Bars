@@ -138,22 +138,9 @@
             width: 100%;
         }
 
-        .overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: none;
-            z-index: 999;
-        }
-
-        /* Стили для таблицы лидеров */
         .leaderboard {
             width: 100%;
             border-collapse: collapse;
-            font-family: Arial, sans-serif;
             margin: 20px 0;
             color: white;
         }
@@ -180,6 +167,70 @@
             font-weight: bold;
             font-size: 1.2em;
         }
+
+        .task-container {
+            padding: 15px;
+        }
+        
+        .task {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #252535;
+            border-radius: 8px;
+        }
+        
+        .task p {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+        
+        .task-input {
+            padding: 8px 12px;
+            width: 70%;
+            border-radius: 5px;
+            border: 1px solid #444;
+            background: #1c1c2e;
+            color: white;
+            margin-right: 10px;
+        }
+        
+        .task-button {
+            padding: 8px 15px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .task-button:hover {
+            background: #2ecc71;
+        }
+        
+        .task-status {
+            display: block;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        
+        .task-completed {
+            color: #2ecc71;
+        }
+        
+        .task-failed {
+            color: #e74c3c;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            z-index: 999;
+        }
     </style>
 </head>
 <body>
@@ -195,10 +246,8 @@
         <img src="https://i.ibb.co/k6V4BhbZ/image.png" class="bars-img" id="bars">
     </div>
 
-    <!-- Оверлей -->
     <div class="overlay" id="overlay"></div>
 
-    <!-- Модалка рейтинга -->
     <div class="modal" id="leaderboardModal">
         <h2>🏆 Рейтинг</h2>
         <table class="leaderboard">
@@ -210,16 +259,14 @@
                 </tr>
             </thead>
             <tbody id="leaderboard-body">
-                <!-- Строки рейтинга будут добавлены здесь динамически -->
             </tbody>
         </table>
         <button onclick="closeLeaderboard()">Закрыть</button>
     </div>
 
-    <!-- Модалка заданий -->
     <div class="modal" id="taskListModal">
         <h2>📚 Задания</h2>
-        <div id="taskList"></div>
+        <div id="tasks-container"></div>
         <button onclick="closeTaskList()">Закрыть</button>
     </div>
 
@@ -339,49 +386,102 @@
             setTimeout(() => el.remove(), 800);
         }
 
+        // Система заданий с ограничением попыток
         const tasks = [
-            { q: "Сколько будет 2 + 2?", a: "4", reward: 20 },
-            { q: "5 × 3 = ?", a: "15", reward: 25 },
-            { q: "Столица России?", a: "Москва", reward: 30 },
+            { id: 1, q: "Сколько будет 2 + 2?", a: "4", reward: 20 },
+            { id: 2, q: "5 × 3 = ?", a: "15", reward: 25 },
+            { id: 3, q: "Столица России?", a: "Москва", reward: 30 }
         ];
 
+        const taskAttempts = JSON.parse(localStorage.getItem('taskAttempts')) || {};
+        const taskCompleted = JSON.parse(localStorage.getItem('taskCompleted')) || {};
+
         function openTask() {
-            const container = document.getElementById("taskList");
-            container.innerHTML = "";
-
-            tasks.forEach((task, index) => {
-                const div = document.createElement("div");
-                div.style.marginBottom = "10px";
-                div.innerHTML = `
-                    <div><b>${task.q}</b> — 💰 ${task.reward}</div>
-                    <input type="text" id="answer-${index}" placeholder="Ваш ответ">
-                    <button onclick="checkTaskAnswer(${index})">Ответить</button>
-                `;
-                container.appendChild(div);
-            });
-
+            renderTasks();
             document.getElementById("taskListModal").style.display = "block";
             document.getElementById("overlay").style.display = "block";
         }
 
-        function checkTaskAnswer(index) {
-            const input = document.getElementById(`answer-${index}`);
-            const answer = input.value.trim();
-            const task = tasks[index];
+        function renderTasks() {
+            const container = document.getElementById("tasks-container");
+            container.innerHTML = "";
 
-            if (answer.toLowerCase() === task.a.toLowerCase()) {
-                coins += task.reward;
-                document.getElementById("coins").textContent = coins;
-                alert(`✅ Верно! +${task.reward} монет`);
-                saveUserData();
-            } else {
-                alert("❌ Неправильно!");
-            }
-        }
+            tasks.forEach(task => {
+                const taskBlock = document.createElement("div");
+                taskBlock.className = "task";
 
-        function closeTaskList() {
-            document.getElementById("taskListModal").style.display = "none";
-            document.getElementById("overlay").style.display = "none";
+                const question = document.createElement("p");
+                question.textContent = task.q;
+
+                const answerInput = document.createElement("input");
+                answerInput.type = "text";
+                answerInput.className = "task-input";
+                
+                const submitBtn = document.createElement("button");
+                submitBtn.className = "task-button";
+                
+                const status = document.createElement("span");
+                status.className = "task-status";
+
+                if (taskCompleted[task.id] === true) {
+                    // Задание выполнено
+                    answerInput.style.display = "none";
+                    submitBtn.style.display = "none";
+                    status.textContent = "✅ Выполнено";
+                    status.className += " task-completed";
+                } else if (taskAttempts[task.id] >= 3) {
+                    // Превышено количество попыток
+                    answerInput.style.display = "none";
+                    submitBtn.style.display = "none";
+                    status.textContent = "❌ Закрыто (попыток больше нет)";
+                    status.className += " task-failed";
+                } else {
+                    answerInput.placeholder = "Ваш ответ...";
+                    answerInput.id = `answer-${task.id}`;
+                    submitBtn.textContent = "Ответить";
+
+                    submitBtn.onclick = () => {
+                        const userAnswer = answerInput.value.trim();
+                        if (userAnswer.toLowerCase() === task.a.toLowerCase()) {
+                            // Правильный ответ
+                            taskCompleted[task.id] = true;
+                            status.textContent = "✅ Верно!";
+                            status.className += " task-completed";
+                            
+                            // Начисляем награду
+                            coins += task.reward;
+                            document.getElementById("coins").textContent = coins;
+                            saveUserData();
+                            
+                            // Показываем анимацию
+                            showFloatingCoin(`+${task.reward}`);
+                        } else {
+                            // Неправильный ответ
+                            taskAttempts[task.id] = (taskAttempts[task.id] || 0) + 1;
+                            if (taskAttempts[task.id] >= 3) {
+                                status.textContent = "❌ Закрыто (попыток больше нет)";
+                                status.className += " task-failed";
+                            } else {
+                                status.textContent = `❌ Неверно. Осталось попыток: ${3 - taskAttempts[task.id]}`;
+                                status.className += " task-failed";
+                            }
+                        }
+                        
+                        // Сохраняем состояние заданий
+                        localStorage.setItem('taskAttempts', JSON.stringify(taskAttempts));
+                        localStorage.setItem('taskCompleted', JSON.stringify(taskCompleted));
+                        
+                        renderTasks(); // Перерисовываем интерфейс
+                    };
+                }
+
+                taskBlock.appendChild(question);
+                taskBlock.appendChild(answerInput);
+                taskBlock.appendChild(submitBtn);
+                taskBlock.appendChild(status);
+
+                container.appendChild(taskBlock);
+            });
         }
 
         function toggleLeaderboard() {
@@ -431,6 +531,11 @@
 
         function closeLeaderboard() {
             document.getElementById("leaderboardModal").style.display = "none";
+            document.getElementById("overlay").style.display = "none";
+        }
+
+        function closeTaskList() {
+            document.getElementById("taskListModal").style.display = "none";
             document.getElementById("overlay").style.display = "none";
         }
     </script>
