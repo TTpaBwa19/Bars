@@ -168,20 +168,22 @@
             font-size: 1.2em;
         }
 
-        .task-container {
-            padding: 15px;
-        }
-        
         .task {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             padding: 15px;
             background: #252535;
             border-radius: 8px;
+            position: relative;
         }
         
-        .task p {
-            margin: 0 0 10px 0;
-            font-size: 16px;
+        .task-question {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .task-reward {
+            color: #f1c40f;
+            margin-bottom: 10px;
         }
         
         .task-input {
@@ -203,22 +205,30 @@
             cursor: pointer;
         }
         
-        .task-button:hover {
-            background: #2ecc71;
-        }
-        
         .task-status {
-            display: block;
             margin-top: 10px;
-            font-size: 14px;
+            padding: 8px;
+            border-radius: 5px;
+            text-align: center;
+            display: none;
         }
         
         .task-completed {
+            background: rgba(46, 204, 113, 0.2);
             color: #2ecc71;
+            display: block;
         }
         
         .task-failed {
+            background: rgba(231, 76, 60, 0.2);
             color: #e74c3c;
+            display: block;
+        }
+        
+        .attempts-counter {
+            font-size: 12px;
+            color: #95a5a6;
+            margin-top: 5px;
         }
 
         .overlay {
@@ -409,44 +419,53 @@
             tasks.forEach(task => {
                 const taskBlock = document.createElement("div");
                 taskBlock.className = "task";
+                taskBlock.id = `task-${task.id}`;
 
-                const question = document.createElement("p");
-                question.textContent = task.q;
+                // Основные элементы задания
+                taskBlock.innerHTML = `
+                    <div class="task-question">${task.q}</div>
+                    <div class="task-reward">Награда: ${task.reward} монет</div>
+                    <div class="task-status" id="status-${task.id}"></div>
+                `;
 
-                const answerInput = document.createElement("input");
-                answerInput.type = "text";
-                answerInput.className = "task-input";
-                
-                const submitBtn = document.createElement("button");
-                submitBtn.className = "task-button";
-                
-                const status = document.createElement("span");
-                status.className = "task-status";
+                // Статус задания
+                const statusEl = taskBlock.querySelector(`#status-${task.id}`);
 
-                if (taskCompleted[task.id] === true) {
-                    // Задание выполнено
-                    answerInput.style.display = "none";
-                    submitBtn.style.display = "none";
-                    status.textContent = "✅ Выполнено";
-                    status.className += " task-completed";
+                if (taskCompleted[task.id]) {
+                    // Задание уже выполнено
+                    statusEl.textContent = "✅ Выполнено";
+                    statusEl.className = "task-status task-completed";
                 } else if (taskAttempts[task.id] >= 3) {
-                    // Превышено количество попыток
-                    answerInput.style.display = "none";
-                    submitBtn.style.display = "none";
-                    status.textContent = "❌ Закрыто (попыток больше нет)";
-                    status.className += " task-failed";
+                    // Попытки исчерпаны
+                    statusEl.textContent = "❌ Вы израсходовали все попытки";
+                    statusEl.className = "task-status task-failed";
                 } else {
-                    answerInput.placeholder = "Ваш ответ...";
-                    answerInput.id = `answer-${task.id}`;
-                    submitBtn.textContent = "Ответить";
+                    // Задание доступно для выполнения
+                    const inputGroup = document.createElement("div");
+                    inputGroup.className = "task-input-group";
+                    inputGroup.innerHTML = `
+                        <input type="text" class="task-input" id="answer-${task.id}" placeholder="Ваш ответ">
+                        <button class="task-button" id="submit-${task.id}">Ответить</button>
+                        <div class="attempts-counter" id="attempts-${task.id}">
+                            Осталось попыток: ${3 - (taskAttempts[task.id] || 0)}
+                        </div>
+                    `;
+                    taskBlock.appendChild(inputGroup);
 
-                    submitBtn.onclick = () => {
+                    // Обработчик отправки ответа
+                    const submitBtn = document.getElementById(`submit-${task.id}`);
+                    const answerInput = document.getElementById(`answer-${task.id}`);
+                    const attemptsCounter = document.getElementById(`attempts-${task.id}`);
+
+                    submitBtn.addEventListener("click", () => {
                         const userAnswer = answerInput.value.trim();
+                        if (!userAnswer) return;
+
                         if (userAnswer.toLowerCase() === task.a.toLowerCase()) {
                             // Правильный ответ
                             taskCompleted[task.id] = true;
-                            status.textContent = "✅ Верно!";
-                            status.className += " task-completed";
+                            statusEl.textContent = "✅ Выполнено";
+                            statusEl.className = "task-status task-completed";
                             
                             // Начисляем награду
                             coins += task.reward;
@@ -455,30 +474,31 @@
                             
                             // Показываем анимацию
                             showFloatingCoin(`+${task.reward}`);
+                            
+                            // Удаляем поля ввода
+                            inputGroup.remove();
                         } else {
                             // Неправильный ответ
                             taskAttempts[task.id] = (taskAttempts[task.id] || 0) + 1;
+                            
                             if (taskAttempts[task.id] >= 3) {
-                                status.textContent = "❌ Закрыто (попыток больше нет)";
-                                status.className += " task-failed";
+                                // Попытки закончились
+                                statusEl.textContent = "❌ Вы израсходовали все попытки";
+                                statusEl.className = "task-status task-failed";
+                                inputGroup.remove();
                             } else {
-                                status.textContent = `❌ Неверно. Осталось попыток: ${3 - taskAttempts[task.id]}`;
-                                status.className += " task-failed";
+                                // Обновляем счётчик попыток
+                                attemptsCounter.textContent = `Осталось попыток: ${3 - taskAttempts[task.id]}`;
+                                answerInput.value = "";
+                                answerInput.focus();
                             }
                         }
                         
                         // Сохраняем состояние заданий
                         localStorage.setItem('taskAttempts', JSON.stringify(taskAttempts));
                         localStorage.setItem('taskCompleted', JSON.stringify(taskCompleted));
-                        
-                        renderTasks(); // Перерисовываем интерфейс
-                    };
+                    });
                 }
-
-                taskBlock.appendChild(question);
-                taskBlock.appendChild(answerInput);
-                taskBlock.appendChild(submitBtn);
-                taskBlock.appendChild(status);
 
                 container.appendChild(taskBlock);
             });
