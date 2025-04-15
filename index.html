@@ -319,8 +319,22 @@
         }
 
         function showLeaderboard() {
-            fetchLeaderboard();
-        }
+    fetch("http://127.0.0.1:5000/leaderboard")
+        .then(response => response.json())
+        .then(data => {
+            let leaderboardText = "🏆 Топ игроков:\n";
+            data.forEach((user, index) => {
+                leaderboardText += `${index + 1}. User ${user.user_id} — ${user.coins} монет\n`;
+            });
+
+            alert(leaderboardText);
+        })
+        .catch(error => {
+            alert("Ошибка загрузки рейтинга");
+            console.error(error);
+        });
+}
+        
     </script>
 
 </body>
