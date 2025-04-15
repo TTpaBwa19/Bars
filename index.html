@@ -1,95 +1,110 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>BarsIQ Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BarsIQ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap" rel="stylesheet">
     <style>
-        body { background: #111; color: #fff; font-family: sans-serif; text-align: center; margin: 0; }
-        .money { font-size: 30px; margin-top: 20px; }
-        .bars-img { width: 150px; cursor: pointer; margin-top: 20px; }
-        .bottom-menu { position: fixed; bottom: 0; left: 0; width: 100%; background: #222; display: flex; justify-content: space-around; padding: 10px 0; }
-        .menu-item { color: white; font-size: 16px; cursor: pointer; }
-        .menu-item:hover { color: #32c4ff; }
-        .modal, .overlay { display: none; position: fixed; z-index: 999; }
-        .modal { top: 50%; left: 50%; transform: translate(-50%, -50%); background: #333; padding: 20px; border-radius: 10px; width: 300px; }
-        .overlay { top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
-        .modal h2 { margin-top: 0; }
-        .leaderboard-entry { margin: 5px 0; text-align: left; }
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #0f0f1a;
+            color: white;
+            text-align: center;
+        }
+
+        .top-players {
+            margin-top: 20px;
+        }
+
+        table {
+            width: 80%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            color: #fff;
+            background-color: #2e2e40;
+        }
+
+        table, th, td {
+            border: 1px solid #555;
+        }
+
+        th, td {
+            padding: 10px;
+        }
+
+        th {
+            background-color: #444;
+        }
+
+        td {
+            text-align: center;
+        }
+
+        .loading {
+            font-size: 24px;
+            color: #32c4ff;
+        }
     </style>
 </head>
 <body>
 
-    <div class="money">💰 <span id="coins">0</span></div>
-
-    <img src="https://i.ibb.co/k6V4BhbZ/image.png" class="bars-img" id="bars">
-
-    <div class="bottom-menu">
-        <div class="menu-item" onclick="showLeaderboard()">🏆 Рейтинг</div>
-    </div>
-
-    <div class="overlay" id="overlay"></div>
-    <div class="modal" id="leaderboardModal">
-        <h2>🏆 Топ игроков</h2>
-        <div id="leaderboardList">Загрузка...</div>
-        <button onclick="closeLeaderboard()">Закрыть</button>
+    <h1>🏆 Рейтинг BarsIQ</h1>
+    <div id="leaderboard-container">
+        <div class="loading">Загрузка...</div>
     </div>
 
     <script>
-        let coins = 0;
-        const coinEl = document.getElementById("coins");
+        // Функция для получения данных с сервера
+        async function fetchLeaderboard() {
+            try {
+                // Запрос к API для получения данных
+                const response = await fetch("http://127.0.0.1:5000/leaderboard");
+                const leaderboardData = await response.json();
 
-        document.getElementById("bars").addEventListener("click", () => {
-            coins++;
-            coinEl.textContent = coins;
+                if (leaderboardData.length === 0) {
+                    document.getElementById('leaderboard-container').innerHTML = "<p>Нет данных о игроках</p>";
+                    return;
+                }
 
-            if (window.Telegram?.WebApp) {
-                Telegram.WebApp.sendData(JSON.stringify({
-                    action: "click",
-                    coins: coins
-                }));
-            }
-        });
+                // Создание таблицы с данными
+                let tableHTML = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Ранг</th>
+                                <th>ID Игрока</th>
+                                <th>Монеты</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
 
-        function showLeaderboard() {
-            document.getElementById("overlay").style.display = "block";
-            document.getElementById("leaderboardModal").style.display = "block";
-            document.getElementById("leaderboardList").innerText = "Загрузка...";
-
-            if (window.Telegram?.WebApp) {
-                Telegram.WebApp.sendData(JSON.stringify({ action: "get_leaderboard" }));
-                Telegram.WebApp.onEvent("message", function(event) {
-                    if (typeof event.data === "string") {
-                        try {
-                            const data = JSON.parse(event.data);
-                            if (data.leaderboard) {
-                                renderLeaderboard(data.leaderboard);
-                            }
-                        } catch (e) {
-                            console.error("Ошибка обработки рейтинга:", e);
-                        }
-                    }
+                // Заполняем таблицу данными из API
+                leaderboardData.forEach((player, index) => {
+                    tableHTML += `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${player.user_id}</td>
+                            <td>${player.coins}</td>
+                        </tr>
+                    `;
                 });
+
+                tableHTML += "</tbody></table>";
+
+                // Вставляем таблицу в контейнер
+                document.getElementById('leaderboard-container').innerHTML = tableHTML;
+            } catch (error) {
+                console.error("Ошибка при загрузке данных:", error);
+                document.getElementById('leaderboard-container').innerHTML = "<p>Ошибка при загрузке данных. Попробуйте позже.</p>";
             }
         }
 
-        function renderLeaderboard(list) {
-            const container = document.getElementById("leaderboardList");
-            container.innerHTML = "";
-            list.forEach((item, i) => {
-                const div = document.createElement("div");
-                div.className = "leaderboard-entry";
-                div.textContent = `${i + 1}. ID ${item.user_id} — ${item.coins} 💰`;
-                container.appendChild(div);
-            });
-        }
-
-        function closeLeaderboard() {
-            document.getElementById("overlay").style.display = "none";
-            document.getElementById("leaderboardModal").style.display = "none";
-        }
-
-        Telegram.WebApp.expand(); // расширение окна внутри Telegram
+        // Загружаем рейтинг при загрузке страницы
+        fetchLeaderboard();
     </script>
 
 </body>
 </html>
+
