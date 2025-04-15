@@ -98,7 +98,6 @@
             color: #32c4ff;
         }
 
-        /* Модалка */
         .modal {
             position: fixed;
             top: 50%;
@@ -110,12 +109,15 @@
             display: none;
             color: white;
             width: 80%;
-            max-width: 300px;
+            max-width: 400px;
             z-index: 1000;
+            overflow-y: auto;
+            max-height: 80%;
         }
 
         .modal h2 {
             margin-top: 0;
+            text-align: center;
         }
 
         .modal button {
@@ -126,6 +128,20 @@
             border-radius: 5px;
             color: white;
             cursor: pointer;
+            width: 100%;
+        }
+
+        .modal .leaderboard-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .modal .leaderboard-item {
+            padding: 10px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
         }
 
         .overlay {
@@ -152,19 +168,26 @@
         <img src="https://i.ibb.co/k6V4BhbZ/image.png" class="bars-img" id="bars">
     </div>
 
-    <!-- Модалка -->
+    <!-- Оверлей -->
     <div class="overlay" id="overlay"></div>
 
+    <!-- Модалка рейтинга -->
+    <div class="modal" id="leaderboardModal">
+        <h2>🏆 Рейтинг</h2>
+        <div id="leaderboardList" class="leaderboard-list"></div>
+        <button onclick="closeLeaderboard()">Закрыть</button>
+    </div>
+
+    <!-- Модалка заданий -->
     <div class="modal" id="taskListModal">
         <h2>📚 Задания</h2>
         <div id="taskList"></div>
         <button onclick="closeTaskList()">Закрыть</button>
     </div>
 
-    <!-- Меню -->
     <div class="bottom-menu">
         <div class="menu-item" onclick="openTask()">📚 Задания</div>
-        <div class="menu-item" onclick="showLeaderboard()">🏆 Рейтинг</div>
+        <div class="menu-item" onclick="toggleLeaderboard()">🏆 Рейтинг</div>
     </div>
 
     <script>
@@ -174,21 +197,12 @@
         const progressEl = document.getElementById("progress");
         const circle = document.getElementById("circle");
 
-        progressEl.style.width = ${(currentEnergy / maxEnergy) * 100}%;
+        progressEl.style.width = `${(currentEnergy / maxEnergy) * 100}%`;
 
         document.getElementById("bars").addEventListener("click", () => {
             coins++;
             document.getElementById("coins").textContent = coins;
-
             showFloatingCoin("+1");
-
-            // Отправка в Telegram
-            if (window.Telegram) {
-                Telegram.WebApp.sendData(JSON.stringify({
-                    action: "click",
-                    coins: coins
-                }));
-            }
         });
 
         function showFloatingCoin(text) {
@@ -199,7 +213,6 @@
             setTimeout(() => el.remove(), 800);
         }
 
-        // --- Задания ---
         const tasks = [
             { q: "Сколько будет 2 + 2?", a: "4", reward: 20 },
             { q: "5 × 3 = ?", a: "15", reward: 25 },
@@ -213,13 +226,11 @@
             tasks.forEach((task, index) => {
                 const div = document.createElement("div");
                 div.style.marginBottom = "10px";
-
-                div.innerHTML = 
+                div.innerHTML = `
                     <div><b>${task.q}</b> — 💰 ${task.reward}</div>
                     <input type="text" id="answer-${index}" placeholder="Ваш ответ">
                     <button onclick="checkTaskAnswer(${index})">Ответить</button>
-                ;
-
+                `;
                 container.appendChild(div);
             });
 
@@ -228,14 +239,14 @@
         }
 
         function checkTaskAnswer(index) {
-            const input = document.getElementById(answer-${index});
+            const input = document.getElementById(`answer-${index}`);
             const answer = input.value.trim();
             const task = tasks[index];
 
             if (answer.toLowerCase() === task.a.toLowerCase()) {
                 coins += task.reward;
                 document.getElementById("coins").textContent = coins;
-                alert(✅ Верно! +${task.reward} монет);
+                alert(`✅ Верно! +${task.reward} монет`);
             } else {
                 alert("❌ Неправильно!");
             }
@@ -246,13 +257,36 @@
             document.getElementById("overlay").style.display = "none";
         }
 
-        function closeModal() {
-            document.getElementById("taskModal").style.display = "none";
-            document.getElementById("overlay").style.display = "none";
+        function toggleLeaderboard() {
+            const modal = document.getElementById("leaderboardModal");
+            const overlay = document.getElementById("overlay");
+
+            if (modal.style.display === "block") {
+                modal.style.display = "none";
+                overlay.style.display = "none";
+            } else {
+                fetch("http://127.0.0.1:5000/leaderboard")
+                    .then(response => response.json())
+                    .then(data => {
+                        const leaderboardList = document.getElementById("leaderboardList");
+                        leaderboardList.innerHTML = "";
+
+                        data.forEach((user, index) => {
+                            const item = document.createElement("div");
+                            item.className = "leaderboard-item";
+                            item.innerHTML = `<span>#${index + 1}. ${user.name}</span><span>💰 ${user.coins}</span>`;
+                            leaderboardList.appendChild(item);
+                        });
+
+                        modal.style.display = "block";
+                        overlay.style.display = "block";
+                    });
+            }
         }
 
-        function showLeaderboard() {
-            alert("🏆 Топ игроков:\n1. Вы - " + coins + " монет\n(Пока локально)");
+        function closeLeaderboard() {
+            document.getElementById("leaderboardModal").style.display = "none";
+            document.getElementById("overlay").style.display = "none";
         }
     </script>
 </body>
