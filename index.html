@@ -39,6 +39,12 @@
             color: #ccc;
         }
 
+        .username {
+            font-size: 18px;
+            margin-top: 10px;
+            color: #32c4ff;
+        }
+
         .circle {
             margin: 30px auto;
             width: 220px;
@@ -158,6 +164,7 @@
 </head>
 <body>
     <div class="money">💰 <span id="coins">0</span></div>
+    <div class="username" id="username">Загрузка...</div>
     <div class="rank">Bronze | Уровень 1</div>
 
     <div class="level-bar">
@@ -192,6 +199,7 @@
 
     <script>
         let coins = 0;
+        let username = "Неизвестно";
         const user_id = 123456; // ← замени на Telegram.WebApp.initDataUnsafe.user.id в проде
 
         const maxEnergy = 1000;
@@ -201,15 +209,20 @@
 
         progressEl.style.width = `${(currentEnergy / maxEnergy) * 100}%`;
 
-        // Загрузка монет при старте
+        // Загрузка данных пользователя при старте
         window.addEventListener("DOMContentLoaded", () => {
             fetch(`http://localhost:5000/get_coins?user_id=${user_id}`)
                 .then(res => res.json())
                 .then(data => {
                     coins = data.coins || 0;
                     document.getElementById("coins").textContent = coins;
+
+                    username = data.username || "Неизвестно";
+                    document.getElementById("username").textContent = username;
+                    
+                    console.log("Данные пользователя загружены:", { coins, username });
                 })
-                .catch(err => console.error("Ошибка загрузки монет:", err));
+                .catch(err => console.error("Ошибка загрузки данных:", err));
         });
 
         document.getElementById("bars").addEventListener("click", () => {
@@ -227,13 +240,14 @@
                 },
                 body: JSON.stringify({
                     user_id: user_id,
-                    coins: coins
+                    coins: coins,
+                    username: username // отправляем username на сервер при сохранении
                 })
             })
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    console.log("Монеты сохранены");
+                    console.log("Данные сохранены");
                 } else {
                     console.error("Ошибка сохранения:", data.error);
                 }
@@ -313,7 +327,7 @@
                         data.forEach((user, index) => {
                             const item = document.createElement("div");
                             item.className = "leaderboard-item";
-                            item.innerHTML = `<span>#${index + 1}. ${user.user_id}</span><span>💰 ${user.coins}</span>`;
+                            item.innerHTML = `<span>#${index + 1}. ${user.username || `Пользователь ${user.user_id}`}</span><span>💰 ${user.coins}</span>`;
                             leaderboardList.appendChild(item);
                         });
 
