@@ -275,13 +275,9 @@
                 username = tgUser.username || `User${tgUser.id}`;
                 document.getElementById('username').textContent = username;
                 
-                // Развернуть приложение на весь экран
                 Telegram.WebApp.expand();
-                
-                // Обновить имя пользователя на сервере
                 updateUsername();
             } else {
-                // Режим разработки
                 user_id = Math.floor(Math.random() * 1000000);
                 username = "Тестовый пользователь";
                 document.getElementById('username').textContent = username;
@@ -320,8 +316,6 @@
 
         // Загрузка данных пользователя
         function loadUserData() {
-            // Здесь должна быть реализация загрузки данных с сервера
-            // Для примера используем localStorage
             const savedData = localStorage.getItem(`user_${user_id}_data`);
             if (savedData) {
                 const data = JSON.parse(savedData);
@@ -331,7 +325,6 @@
                 document.getElementById('username').textContent = username;
             }
             
-            // Проверка никнейма
             if (!username || username.includes("User")) {
                 setTimeout(() => {
                     const newUsername = prompt("Введите ваш никнейм:", username);
@@ -352,15 +345,11 @@
                 coins,
                 last_active: new Date().toISOString()
             };
-            
-            // Здесь должна быть реализация сохранения на сервер
-            // Для примера используем localStorage
             localStorage.setItem(`user_${user_id}_data`, JSON.stringify(userData));
         }
 
         // Обновление имени пользователя
         function updateUsername() {
-            // Реализация отправки на сервер
             saveUserData();
         }
 
@@ -411,11 +400,9 @@
             const dayOfWeek = today.getDay();
             const todayDate = today.getDate();
             
-            // Проверяем, был ли уже сохранен день
             const lastActiveDay = localStorage.getItem('lastActiveDay');
             const lastActiveDate = localStorage.getItem('lastActiveDate');
             
-            // Если день изменился, сбрасываем прогресс
             if (!lastActiveDay || lastActiveDay !== dayOfWeek.toString() || lastActiveDate !== todayDate.toString()) {
                 localStorage.setItem('lastActiveDay', dayOfWeek);
                 localStorage.setItem('lastActiveDate', todayDate);
@@ -438,7 +425,7 @@
             showModal('taskListModal');
         }
 
-        // Отрисовка заданий
+        // Отрисовка заданий (обновленная версия)
         function renderTasks(dayData) {
             const container = document.getElementById('tasks-container');
             container.innerHTML = '';
@@ -449,79 +436,77 @@
                 const taskEl = document.createElement('div');
                 taskEl.className = 'task';
                 taskEl.id = `task-${task.id}`;
-                
-                const isCompleted = taskProgress[task.id]?.completed;
-                const attempts = taskProgress[task.id]?.attempts || 0;
-                
-                if (isCompleted) {
-                    taskEl.innerHTML = `
-                        <p>${task.q}</p>
-                        <div class="task-reward">Награда: ${task.reward} монет</div>
-                        <div class="task-status task-completed">✅ Выполнено</div>
-                    `;
-                } else if (attempts >= 3) {
-                    taskEl.innerHTML = `
-                        <p>${task.q}</p>
-                        <div class="task-status task-failed">❌ Попытки исчерпаны</div>
-                    `;
+
+                const progress = taskProgress[task.id] || { attempts: 0, completed: false, failed: false };
+
+                const questionEl = document.createElement('p');
+                questionEl.textContent = task.q;
+                taskEl.appendChild(questionEl);
+
+                const rewardEl = document.createElement('div');
+                rewardEl.className = 'task-reward';
+                rewardEl.textContent = `Награда: ${task.reward} монет`;
+                taskEl.appendChild(rewardEl);
+
+                if (progress.completed) {
+                    const status = document.createElement('div');
+                    status.className = 'task-status task-completed';
+                    status.textContent = '✅ Выполнено';
+                    taskEl.appendChild(status);
+                } else if (progress.failed) {
+                    const status = document.createElement('div');
+                    status.className = 'task-status task-failed';
+                    status.textContent = '❌ Попытки исчерпаны';
+                    taskEl.appendChild(status);
                 } else {
-                    taskEl.innerHTML = `
-                        <p>${task.q}</p>
-                        <div class="task-reward">Награда: ${task.reward} монет</div>
-                        <div class="task-input-group">
-                            <input type="text" id="answer-${task.id}" placeholder="Ваш ответ">
-                            <button id="submit-${task.id}">Ответить</button>
-                            <div>Попыток: ${3 - attempts}</div>
-                        </div>
-                        <div class="error-message" id="error-${task.id}">Неверный ответ!</div>
-                    `;
+                    const inputGroup = document.createElement('div');
+                    inputGroup.className = 'task-input-group';
                     
-                    // Добавляем обработчик для кнопки отправки
-                    document.getElementById(`submit-${task.id}`).addEventListener('click', () => {
-                        checkTaskAnswer(task);
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.placeholder = 'Ваш ответ';
+                    inputGroup.appendChild(input);
+
+                    const button = document.createElement('button');
+                    button.textContent = 'Ответить';
+                    inputGroup.appendChild(button);
+
+                    const error = document.createElement('div');
+                    error.className = 'error-message';
+                    taskEl.appendChild(error);
+
+                    button.addEventListener('click', () => {
+                        const answer = input.value.trim().toLowerCase();
+                        const correct = task.a.toLowerCase();
+                        let newProgress = JSON.parse(localStorage.getItem('taskProgress') || '{}');
+                        newProgress[task.id] = newProgress[task.id] || { attempts: 0, completed: false };
+
+                        if (answer === correct) {
+                            newProgress[task.id].completed = true;
+                            coins += task.reward;
+                            updateCoinsDisplay();
+                            saveUserData();
+                            showFloatingCoin(`+${task.reward}`);
+                            renderTasks(dayData);
+                        } else {
+                            newProgress[task.id].attempts += 1;
+                            if (newProgress[task.id].attempts >= 3) {
+                                newProgress[task.id].failed = true;
+                                renderTasks(dayData);
+                            } else {
+                                error.textContent = `❌ Неправильно. Осталось попыток: ${3 - newProgress[task.id].attempts}`;
+                                error.style.display = 'block';
+                            }
+                        }
+
+                        localStorage.setItem('taskProgress', JSON.stringify(newProgress));
                     });
+
+                    taskEl.appendChild(inputGroup);
                 }
-                
+
                 container.appendChild(taskEl);
             });
-        }
-
-        // Проверка ответа на задание
-        function checkTaskAnswer(task) {
-            const userAnswer = document.getElementById(`answer-${task.id}`).value.trim().toLowerCase();
-            const correctAnswer = task.a.toLowerCase();
-            let taskProgress = JSON.parse(localStorage.getItem('taskProgress') || '{}');
-            
-            if (!taskProgress[task.id]) {
-                taskProgress[task.id] = { attempts: 0, completed: false };
-            }
-            
-            if (userAnswer === correctAnswer) {
-                // Правильный ответ
-                taskProgress[task.id].completed = true;
-                coins += task.reward;
-                updateCoinsDisplay();
-                showFloatingCoin(`+${task.reward}`);
-                saveUserData();
-                
-                // Обновляем отображение
-                renderTasks(getCurrentDayTasks());
-            } else {
-                // Неправильный ответ
-                taskProgress[task.id].attempts++;
-                document.getElementById(`error-${task.id}`).style.display = 'block';
-                setTimeout(() => {
-                    document.getElementById(`error-${task.id}`).style.display = 'none';
-                }, 2000);
-                
-                if (taskProgress[task.id].attempts >= 3) {
-                    // Попытки закончились
-                    renderTasks(getCurrentDayTasks());
-                }
-            }
-            
-            // Сохраняем прогресс
-            localStorage.setItem('taskProgress', JSON.stringify(taskProgress));
         }
 
         // Рейтинг игроков
@@ -530,8 +515,6 @@
             if (modal.style.display === 'block') {
                 closeLeaderboard();
             } else {
-                // Здесь должна быть загрузка рейтинга с сервера
-                // Для примера создаем тестовые данные
                 const testData = [
                     { user_id: 1, username: "Лучший игрок", coins: 100 },
                     { user_id: 2, username: "Второй игрок", coins: 75 },
@@ -555,11 +538,17 @@
             }
         }
 
-        // Управление модальными окнами
-        function showModal(modalId) {
-            document.getElementById(modalId).style.display = 'block';
+        // Управление модальными окнами (обновленная версия)
+        function showModal(id) {
+            document.getElementById(id).style.display = 'block';
             document.getElementById('overlay').style.display = 'block';
             document.body.style.overflow = 'hidden';
+        }
+
+        function closeAllModals() {
+            document.querySelectorAll('.modal').forEach(modal => modal.style.display = 'none');
+            document.getElementById('overlay').style.display = 'none';
+            document.body.style.overflow = '';
         }
 
         function closeTaskList() {
@@ -572,11 +561,6 @@
             document.getElementById('leaderboardModal').style.display = 'none';
             document.getElementById('overlay').style.display = 'none';
             document.body.style.overflow = '';
-        }
-
-        function closeAllModals() {
-            closeTaskList();
-            closeLeaderboard();
         }
     </script>
 </body>
