@@ -15,10 +15,12 @@
             overflow-x: hidden;
             touch-action: manipulation;
         }
+
         .money {
             font-size: 32px;
             margin-top: 20px;
         }
+
         .level-bar {
             width: 80%;
             height: 10px;
@@ -27,20 +29,24 @@
             margin: 10px auto;
             overflow: hidden;
         }
+
         .level-progress {
             width: 30%;
             height: 100%;
             background: linear-gradient(90deg, #32c4ff, #9e6eff);
         }
+
         .rank {
             font-size: 16px;
             color: #ccc;
         }
+
         .username {
             font-size: 18px;
             margin-top: 10px;
             color: #32c4ff;
         }
+
         .circle {
             margin: 30px auto;
             width: 220px;
@@ -52,6 +58,7 @@
             justify-content: center;
             position: relative;
         }
+
         .bars-img {
             width: 250px;
             height: 250px;
@@ -61,6 +68,7 @@
             box-shadow: 0 0 10px rgba(255,255,255,0.1);
             cursor: pointer;
         }
+
         .floating-coin {
             position: absolute;
             color: gold;
@@ -70,10 +78,12 @@
             transform: translateX(-50%);
             pointer-events: none;
         }
+
         @keyframes floatUp {
             0% { bottom: 20px; opacity: 1; }
             100% { bottom: 100px; opacity: 0; }
         }
+
         .bottom-menu {
             position: fixed;
             bottom: 0;
@@ -85,15 +95,18 @@
             padding: 10px 0;
             border-top: 1px solid #333;
         }
+
         .menu-item {
             color: white;
             font-size: 14px;
             cursor: pointer;
             padding: 10px 15px;
         }
+
         .menu-item:hover {
             color: #32c4ff;
         }
+
         .modal {
             position: fixed;
             top: 50%;
@@ -111,10 +124,12 @@
             max-height: 80vh;
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
         }
+
         .modal h2 {
             margin-top: 0;
             text-align: center;
         }
+
         .modal button {
             margin-top: 10px;
             padding: 8px 12px;
@@ -126,20 +141,37 @@
             width: 100%;
             font-weight: bold;
         }
+
         .leaderboard {
             width: 100%;
             border-collapse: collapse;
             margin: 20px 0;
             color: white;
         }
+
         .leaderboard th, .leaderboard td {
             border: 1px solid #444;
             padding: 12px;
             text-align: center;
         }
+
         .leaderboard thead {
             background-color: #2a2a3a;
         }
+
+        .leaderboard tbody tr:nth-child(even) {
+            background-color: #252535;
+        }
+
+        .leaderboard tbody tr:hover {
+            background-color: #1e2b3e;
+        }
+
+        .leaderboard td:first-child {
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
         .task {
             background: #252535;
             border-radius: 15px;
@@ -147,10 +179,12 @@
             margin-bottom: 15px;
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
         }
+
         .task p {
             font-size: 18px;
             margin-bottom: 10px;
         }
+
         .task input {
             padding: 10px;
             font-size: 16px;
@@ -161,6 +195,7 @@
             background: #1c1c2e;
             color: white;
         }
+
         .task button {
             padding: 10px 15px;
             font-size: 16px;
@@ -170,24 +205,33 @@
             border-radius: 10px;
             cursor: pointer;
         }
+
+        .task button:hover {
+            background: #45a049;
+        }
+
         .task-status {
             display: inline-block;
             margin-top: 10px;
             font-weight: bold;
             font-size: 16px;
         }
+
         .task-completed {
             color: #2ecc71;
         }
+
         .task-failed {
             color: #e74c3c;
         }
+
         .error-message {
             color: #e74c3c;
             font-size: 14px;
             margin-top: 5px;
             display: none;
         }
+
         .overlay {
             position: fixed;
             top: 0;
@@ -198,11 +242,13 @@
             display: none;
             z-index: 999;
         }
+
         .day-indicator {
             margin-bottom: 15px;
             font-size: 18px;
             color: #32c4ff;
         }
+
         .task-reward {
             color: gold;
             margin-bottom: 10px;
@@ -425,7 +471,7 @@
             showModal('taskListModal');
         }
 
-        // Отрисовка заданий (обновленная версия)
+        // Отрисовка заданий
         function renderTasks(dayData) {
             const container = document.getElementById('tasks-container');
             container.innerHTML = '';
@@ -464,15 +510,18 @@
                     
                     const input = document.createElement('input');
                     input.type = 'text';
+                    input.id = `answer-${task.id}`;
                     input.placeholder = 'Ваш ответ';
                     inputGroup.appendChild(input);
 
                     const button = document.createElement('button');
+                    button.id = `submit-${task.id}`;
                     button.textContent = 'Ответить';
                     inputGroup.appendChild(button);
 
                     const error = document.createElement('div');
                     error.className = 'error-message';
+                    error.id = `error-${task.id}`;
                     taskEl.appendChild(error);
 
                     button.addEventListener('click', () => {
@@ -538,7 +587,7 @@
             }
         }
 
-        // Управление модальными окнами (обновленная версия)
+        // Управление модальными окнами
         function showModal(id) {
             document.getElementById(id).style.display = 'block';
             document.getElementById('overlay').style.display = 'block';
