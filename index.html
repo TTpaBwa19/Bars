@@ -253,6 +253,20 @@
             color: gold;
             margin-bottom: 10px;
         }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -281,6 +295,9 @@
                 </tr>
             </thead>
             <tbody id="leaderboard-body">
+                <tr>
+                    <td colspan="3"><div class="loading"></div> Загрузка...</td>
+                </tr>
             </tbody>
         </table>
         <button onclick="closeLeaderboard()">Закрыть</button>
@@ -299,6 +316,9 @@
     </div>
 
     <script>
+        // Конфигурация API
+        const API_BASE_URL = "http://localhost:5000"; // Замените на ваш URL сервера
+        
         // Основные переменные
         let coins = 0;
         let username = "Неизвестно";
@@ -307,10 +327,10 @@
         const currentEnergy = 145;
 
         // Инициализация при загрузке
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             initTelegramWebApp();
             setupEventListeners();
-            loadUserData();
+            await loadUserData();
             checkUsername();
         });
 
@@ -335,16 +355,16 @@
         }
 
         // Проверка никнейма пользователя
-        function checkUsername() {
+        async function checkUsername() {
             const savedUsername = localStorage.getItem(`user_${user_id}_username`);
             if (!savedUsername || savedUsername === "Неизвестно" || savedUsername.includes("Пользователь")) {
-                setTimeout(() => {
+                setTimeout(async () => {
                     const newUsername = prompt("Введите ваш никнейм:", username);
                     if (newUsername && newUsername.trim() !== "") {
                         username = newUsername;
                         document.getElementById("username").textContent = username;
-                        updateUsername();
-                        saveUserData();
+                        await updateUsername();
+                        await saveUserData();
                     }
                 }, 500);
             }
@@ -359,11 +379,11 @@
         }
 
         // Обработчик клика по главному изображению
-        function tapHandler() {
+        async function tapHandler() {
             coins++;
             updateCoinsDisplay();
             showFloatingCoin("+1");
-            saveUserData();
+            await saveUserData();
         }
 
         // Обновление отображения монет
@@ -381,7 +401,29 @@
         }
 
         // Загрузка данных пользователя
-        function loadUserData() {
+        async function loadUserData() {
+            showLoader('username', 'Загрузка...');
+            
+            // Сначала пробуем загрузить с сервера
+            try {
+                const response = await fetch(`${API_BASE_URL}/get_user?user_id=${user_id}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    coins = data.coins || 0;
+                    username = data.username || username;
+                    updateCoinsDisplay();
+                    document.getElementById('username').textContent = username;
+                    
+                    // Сохраняем локально на случай оффлайн-режима
+                    localStorage.setItem(`user_${user_id}_data`, JSON.stringify(data));
+                    localStorage.setItem(`user_${user_id}_username`, username);
+                    return;
+                }
+            } catch (error) {
+                console.error("Ошибка загрузки данных с сервера:", error);
+            }
+            
+            // Fallback: загрузка из localStorage
             const savedData = localStorage.getItem(`user_${user_id}_data`);
             if (savedData) {
                 const data = JSON.parse(savedData);
@@ -393,66 +435,87 @@
         }
 
         // Сохранение данных пользователя
-        function saveUserData() {
+        async function saveUserData() {
             const userData = {
                 user_id,
                 username,
                 coins,
                 last_active: new Date().toISOString()
             };
+            
+            // Сохраняем локально для быстрого доступа
             localStorage.setItem(`user_${user_id}_data`, JSON.stringify(userData));
+            localStorage.setItem(`user_${user_id}_username`, username);
+            
+            // Синхронизируем с сервером
+            try {
+                const response = await fetch(`${API_BASE_URL}/update_user`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(userData)
+                });
+                
+                if (!response.ok) {
+                    console.error("Ошибка сохранения данных на сервере");
+                }
+            } catch (error) {
+                console.error("Ошибка соединения с сервером:", error);
+            }
         }
 
         // Обновление имени пользователя
-        function updateUsername() {
+        async function updateUsername() {
             localStorage.setItem(`user_${user_id}_username`, username);
+            await saveUserData();
         }
 
         // Система заданий по дням недели с разными наградами
         const allTasks = [
             // Воскресенье (0)
             [
-        { id: 1, q: "Сколько будет 1 + 3?", a: "4", reward: 10 },
-        { id: 2, q: "Какой день идёт после субботы?", a: "Воскресенье", reward: 15 },
-        { id: 3, q: "Сколько колёс у машины?", a: "4", reward: 10 }
-    ],
-    // Понедельник (1)
-    [
-        { id: 4, q: "Сколько дней в неделе?", a: "7", reward: 10 },
-        { id: 5, q: "Что длиннее: час или минута?", a: "Час", reward: 15 },
-        { id: 6, q: "Если сегодня понедельник, какой день будет завтра?", a: "Вторник", reward: 20 }
-    ],
-    // Вторник (2)
-    [
-        { id: 7, q: "Сколько будет 5 - 2?", a: "3", reward: 10 },
-        { id: 8, q: "Какая фигура имеет 4 угла?", a: "Квадрат", reward: 15 },
-        { id: 9, q: "Что больше: 12 или 21?", a: "21", reward: 15 }
-    ],
-    // Среда (3)
-    [
-        { id: 10, q: "Сколько ног у человека?", a: "2", reward: 10 },
-        { id: 11, q: "Если у тебя есть 3 яблока и ты дашь 1 другу, сколько останется?", a: "2", reward: 15 },
-        { id: 12, q: "Какое число больше: 9 или 6?", a: "9", reward: 10 }
-    ],
-    // Четверг (4)
-    [
-        { id: 13, q: "Какая фигура круглая?", a: "Круг", reward: 10 },
-        { id: 14, q: "Если зима, идёт снег или дождь?", a: "Снег", reward: 15 },
-        { id: 15, q: "Что тяжелее: перо или камень?", a: "Камень", reward: 20 }
-    ],
-    // Пятница (5)
-    [
-        { id: 16, q: "Сколько месяцев в году?", a: "12", reward: 15 },
-        { id: 17, q: "Что начинается раньше: утро или вечер?", a: "Утро", reward: 20 },
-        { id: 18, q: "Сколько будет 2 × 3?", a: "6", reward: 15 }
-    ],
-    // Суббота (6)
-    [
-        { id: 19, q: "Какое сейчас время года, если растёт снеговик?", a: "Зима", reward: 20 },
-        { id: 20, q: "Сколько пальцев на одной руке?", a: "5", reward: 10 },
-        { id: 21, q: "Если ты лёг спать в 9 вечера, а проснулся в 7 утра — сколько часов ты спал?", a: "10", reward: 20 }
-    ]
-];
+                { id: 1, q: "Сколько будет 2 + 2?", a: "4", reward: 10 },
+                { id: 2, q: "5 × 3 = ?", a: "15", reward: 15 },
+                { id: 3, q: "Столица России?", a: "Москва", reward: 20 }
+            ],
+            // Понедельник (1)
+            [
+                { id: 4, q: "Сколько будет 10 / 2?", a: "5", reward: 10 },
+                { id: 5, q: "Год основания Москвы?", a: "1147", reward: 20 },
+                { id: 6, q: "Что такое Python?", a: "Язык программирования", reward: 15 }
+            ],
+            // Вторник (2)
+            [
+                { id: 7, q: "Какая планета самая большая?", a: "Юпитер", reward: 20 },
+                { id: 8, q: "Какой элемент таблицы Менделеева имеет символ H?", a: "Водород", reward: 10 },
+                { id: 9, q: "Какая страна имеет самую большую площадь?", a: "Россия", reward: 15 }
+            ],
+            // Среда (3)
+            [
+                { id: 10, q: "Сколько океанов на Земле?", a: "5", reward: 10 },
+                { id: 11, q: "Какая страна в Южной Америке?", a: "Аргентина", reward: 15 },
+                { id: 12, q: "Сколько зубов у взрослого человека?", a: "32", reward: 20 }
+            ],
+            // Четверг (4)
+            [
+                { id: 13, q: "Сколько секунд в минуте?", a: "60", reward: 10 },
+                { id: 14, q: "Что такое HTML?", a: "Язык разметки", reward: 15 },
+                { id: 15, q: "Самый глубокий океан?", a: "Тихий", reward: 20 }
+            ],
+            // Пятница (5)
+            [
+                { id: 16, q: "Что такое алгоритм?", a: "Последовательность шагов", reward: 15 },
+                { id: 17, q: "Какой язык используется для веб-разработки?", a: "JavaScript", reward: 20 },
+                { id: 18, q: "Какой цвет у марса?", a: "Красный", reward: 10 }
+            ],
+            // Суббота (6)
+            [
+                { id: 19, q: "Сколько лет длился Век Просвещения?", a: "100 лет", reward: 15 },
+                { id: 20, q: "Кто написал 'Войну и мир'?", a: "Лев Толстой", reward: 20 },
+                { id: 21, q: "Какая столица Великобритании?", a: "Лондон", reward: 10 }
+            ]
+        ];
 
         const dayNames = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
 
@@ -544,7 +607,7 @@
                     error.id = `error-${task.id}`;
                     taskEl.appendChild(error);
 
-                    button.addEventListener('click', () => {
+                    button.addEventListener('click', async () => {
                         const answer = input.value.trim().toLowerCase();
                         const correct = task.a.toLowerCase();
                         let newProgress = JSON.parse(localStorage.getItem('taskProgress') || '{}');
@@ -558,7 +621,7 @@
                             newProgress[task.id].completed = true;
                             coins += task.reward;
                             updateCoinsDisplay();
-                            saveUserData();
+                            await saveUserData();
                             showFloatingCoin(`+${task.reward}`);
                             
                             // Немедленно обновляем интерфейс
@@ -593,49 +656,69 @@
         }
 
         // Рейтинг игроков
-        function toggleLeaderboard() {
+        async function toggleLeaderboard() {
             const modal = document.getElementById('leaderboardModal');
             const overlay = document.getElementById('overlay');
 
             if (modal.style.display === 'block') {
                 closeLeaderboard();
             } else {
-                // Здесь должна быть загрузка данных с сервера
-                // Для примера используем данные из localStorage
-                const leaderboardData = [];
-                
-                // Собираем данные всех пользователей (в реальном приложении это будет запрос к серверу)
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key.startsWith('user_') && key.endsWith('_data')) {
-                        const userData = JSON.parse(localStorage.getItem(key));
-                        leaderboardData.push({
-                            user_id: userData.user_id,
-                            username: userData.username,
-                            coins: userData.coins || 0
-                        });
-                    }
-                }
-                
-                // Сортируем по количеству монет
-                leaderboardData.sort((a, b) => b.coins - a.coins);
-                
-                const tbody = document.getElementById('leaderboard-body');
-                tbody.innerHTML = '';
-                
-                leaderboardData.slice(0, 10).forEach((user, index) => {
-                    const tr = document.createElement('tr');
-                    const medal = getMedal(index + 1);
-                    tr.innerHTML = `
-                        <td>${medal}</td>
-                        <td>${user.username || `Пользователь ${user.user_id}`}</td>
-                        <td>${user.coins}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-
+                showLoader('leaderboard-body', 'Загрузка рейтинга...');
                 showModal('leaderboardModal');
+                
+                try {
+                    const response = await fetch(`${API_BASE_URL}/leaderboard`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        renderLeaderboard(data.data);
+                    } else {
+                        renderLocalLeaderboard();
+                    }
+                } catch (error) {
+                    console.error("Ошибка загрузки рейтинга:", error);
+                    renderLocalLeaderboard();
+                }
             }
+        }
+
+        function renderLeaderboard(leaderboardData) {
+            const tbody = document.getElementById('leaderboard-body');
+            tbody.innerHTML = '';
+            
+            if (leaderboardData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3">Нет данных о рейтинге</td></tr>';
+                return;
+            }
+            
+            leaderboardData.slice(0, 10).forEach((user, index) => {
+                const tr = document.createElement('tr');
+                const medal = getMedal(index + 1);
+                tr.innerHTML = `
+                    <td>${medal}</td>
+                    <td>${user.username || `Пользователь ${user.user_id}`}</td>
+                    <td>${user.coins || 0}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderLocalLeaderboard() {
+            const leaderboardData = [];
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('user_') && key.endsWith('_data')) {
+                    const userData = JSON.parse(localStorage.getItem(key));
+                    leaderboardData.push({
+                        user_id: userData.user_id,
+                        username: userData.username,
+                        coins: userData.coins || 0
+                    });
+                }
+            }
+            
+            leaderboardData.sort((a, b) => (b.coins || 0) - (a.coins || 0));
+            renderLeaderboard(leaderboardData);
         }
 
         function getMedal(position) {
@@ -644,6 +727,19 @@
                 case 2: return '🥈';
                 case 3: return '🥉';
                 default: return position;
+            }
+        }
+
+        // Показать индикатор загрузки
+        function showLoader(elementId, text = 'Загрузка...') {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.innerHTML = `
+                    <div style="display: flex; justify-content: center; align-items: center; gap: 10px;">
+                        <div class="loading"></div>
+                        <span>${text}</span>
+                    </div>
+                `;
             }
         }
 
