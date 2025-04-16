@@ -238,6 +238,12 @@
             display: none;
             z-index: 999;
         }
+
+        .day-indicator {
+            margin-bottom: 15px;
+            font-size: 18px;
+            color: #32c4ff;
+        }
     </style>
 </head>
 <body>
@@ -273,6 +279,7 @@
 
     <div class="modal" id="taskListModal">
         <h2>📚 Задания</h2>
+        <div class="day-indicator" id="day-indicator"></div>
         <div id="tasks-container"></div>
         <button onclick="closeTaskList()">Закрыть</button>
     </div>
@@ -325,6 +332,9 @@
 
                     // Загружаем данные пользователя
                     loadUserData();
+                    
+                    // Проверяем, нужно ли запросить никнейм
+                    checkUsername();
                 }
             } else {
                 // Режим разработки (если не в Telegram WebApp)
@@ -334,6 +344,32 @@
                 loadUserData();
             }
         });
+
+        function checkUsername() {
+            fetch(`http://localhost:5000/get_coins?user_id=${user_id}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.username || data.username === "Неизвестно") {
+                        const newUsername = prompt("Введите ваш никнейм:");
+                        if (newUsername) {
+                            username = newUsername;
+                            document.getElementById("username").textContent = username;
+                            
+                            // Сохраняем на сервере
+                            fetch("http://localhost:5000/update_username", {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json"
+                                },
+                                body: JSON.stringify({ user_id, username })
+                            })
+                            .then(() => {
+                                alert("Никнейм сохранён!");
+                            });
+                        }
+                    }
+                });
+        }
 
         function loadUserData() {
             fetch(`http://localhost:5000/get_coins?user_id=${user_id}`)
@@ -393,87 +429,104 @@
             setTimeout(() => el.remove(), 800);
         }
 
-        // Система заданий по дням недели
+        // Система заданий по дням недели (упрощенные для начальной школы)
         const allTasks = [
-            // День 1 (Воскресенье)
+            // Воскресенье (0)
             [
-                { id: 1, q: "Сколько будет 2 + 2?", a: "4", reward: 20 },
-                { id: 2, q: "5 × 3 = ?", a: "15", reward: 25 },
-                { id: 3, q: "Столица России?", a: "Москва", reward: 30 }
+                { id: 1, q: "Сколько будет 1 + 1?", a: "2", reward: 10 },
+                { id: 2, q: "Какого цвета трава?", a: "Зелёного", reward: 10 },
+                { id: 3, q: "Сколько лап у кошки?", a: "4", reward: 10 }
             ],
-            // День 2 (Понедельник)
+            // Понедельник (1)
             [
-                { id: 4, q: "Сколько будет 10 / 2?", a: "5", reward: 20 },
-                { id: 5, q: "Год основания Москвы?", a: "1147", reward: 30 },
-                { id: 6, q: "Что такое Python?", a: "Язык программирования", reward: 25 }
+                { id: 4, q: "Сколько будет 5 - 2?", a: "3", reward: 10 },
+                { id: 5, q: "Как называется детёныш собаки?", a: "Щенок", reward: 10 },
+                { id: 6, q: "Сколько месяцев в году?", a: "12", reward: 10 }
             ],
-            // День 3 (Вторник)
+            // Вторник (2)
             [
-                { id: 7, q: "Какая планета самая большая?", a: "Юпитер", reward: 30 },
-                { id: 8, q: "Какой элемент таблицы Менделеева имеет символ H?", a: "Водород", reward: 20 },
-                { id: 9, q: "Какая страна имеет самую большую площадь?", a: "Россия", reward: 25 }
+                { id: 7, q: "Сколько будет 2 × 3?", a: "6", reward: 10 },
+                { id: 8, q: "Какое время года после весны?", a: "Лето", reward: 10 },
+                { id: 9, q: "Сколько дней в неделе?", a: "7", reward: 10 }
             ],
-            // День 4 (Среда)
+            // Среда (3)
             [
-                { id: 10, q: "Сколько океанов на Земле?", a: "5", reward: 20 },
-                { id: 11, q: "Какая страна в Южной Америке?", a: "Аргентина", reward: 25 },
-                { id: 12, q: "Сколько зубов у взрослого человека?", a: "32", reward: 30 }
+                { id: 10, q: "Сколько будет 10 / 2?", a: "5", reward: 10 },
+                { id: 11, q: "Какое животное говорит 'мяу'?", a: "Кошка", reward: 10 },
+                { id: 12, q: "Какого цвета солнце?", a: "Жёлтого", reward: 10 }
             ],
-            // День 5 (Четверг)
+            // Четверг (4)
             [
-                { id: 13, q: "Сколько секунд в минуте?", a: "60", reward: 20 },
-                { id: 14, q: "Что такое HTML?", a: "Язык разметки", reward: 25 },
-                { id: 15, q: "Самый глубокий океан?", a: "Тихий", reward: 30 }
+                { id: 13, q: "Сколько будет 4 + 5?", a: "9", reward: 10 },
+                { id: 14, q: "Какое время года самое холодное?", a: "Зима", reward: 10 },
+                { id: 15, q: "Сколько пальцев на одной руке?", a: "5", reward: 10 }
             ],
-            // День 6 (Пятница)
+            // Пятница (5)
             [
-                { id: 16, q: "Что такое алгоритм?", a: "Последовательность шагов", reward: 25 },
-                { id: 17, q: "Какой язык используется для веб-разработки?", a: "JavaScript", reward: 30 },
-                { id: 18, q: "Какой цвет у марса?", a: "Красный", reward: 20 }
+                { id: 16, q: "Сколько будет 7 - 3?", a: "4", reward: 10 },
+                { id: 17, q: "Какое животное даёт молоко?", a: "Корова", reward: 10 },
+                { id: 18, q: "Какого цвета снег?", a: "Белого", reward: 10 }
             ],
-            // День 7 (Суббота)
+            // Суббота (6)
             [
-                { id: 19, q: "Сколько лет длился Век Просвещения?", a: "100 лет", reward: 25 },
-                { id: 20, q: "Кто написал 'Войну и мир'?", a: "Лев Толстой", reward: 30 },
-                { id: 21, q: "Какая столица Великобритании?", a: "Лондон", reward: 20 }
+                { id: 19, q: "Сколько будет 6 / 3?", a: "2", reward: 10 },
+                { id: 20, q: "Какое время года после лета?", a: "Осень", reward: 10 },
+                { id: 21, q: "Сколько глаз у человека?", a: "2", reward: 10 }
             ]
         ];
 
-        const taskAttempts = JSON.parse(localStorage.getItem('taskAttempts')) || {};
-        const taskCompleted = JSON.parse(localStorage.getItem('taskCompleted')) || {};
-        const lastUpdate = localStorage.getItem('lastUpdate');
+        const dayNames = [
+            "Воскресенье", "Понедельник", "Вторник", 
+            "Среда", "Четверг", "Пятница", "Суббота"
+        ];
 
-        function getDayTasks() {
+        // Получаем текущий день и задачи
+        function getCurrentDayTasks() {
             const today = new Date();
             const currentDay = today.getDay(); // 0 (воскресенье) до 6 (суббота)
+            const currentDate = today.getDate();
             
-            // Если день изменился, сбрасываем прогресс
-            if (lastUpdate && new Date(lastUpdate).getDate() !== today.getDate()) {
-                localStorage.setItem('lastUpdate', today.toISOString());
-                return allTasks[currentDay];
+            // Проверяем, был ли уже сохранен день
+            const savedDay = localStorage.getItem('currentDay');
+            const savedDate = localStorage.getItem('currentDate');
+            
+            // Если день изменился или это первый запуск
+            if (savedDay === null || savedDate === null || 
+                parseInt(savedDay) !== currentDay || 
+                parseInt(savedDate) !== currentDate) {
+                
+                // Сбрасываем прогресс для нового дня
+                localStorage.setItem('currentDay', currentDay);
+                localStorage.setItem('currentDate', currentDate);
+                localStorage.removeItem('dayAttempts');
+                localStorage.removeItem('dayCompleted');
+                
+                console.log("Новый день, задачи сброшены");
             }
             
-            // Если это первый запуск, сохраняем текущую дату
-            if (!lastUpdate) {
-                localStorage.setItem('lastUpdate', today.toISOString());
-            }
-            
-            return allTasks[currentDay];
+            return {
+                day: currentDay,
+                dayName: dayNames[currentDay],
+                tasks: allTasks[currentDay]
+            };
         }
 
         function openTask() {
-            renderTasks();
+            const dayData = getCurrentDayTasks();
+            document.getElementById("day-indicator").textContent = `День: ${dayData.dayName}`;
+            renderTasks(dayData);
             document.getElementById("taskListModal").style.display = "block";
             document.getElementById("overlay").style.display = "block";
         }
 
-        function renderTasks() {
+        function renderTasks(dayData) {
             const container = document.getElementById("tasks-container");
             container.innerHTML = "";
 
-            const tasks = getDayTasks();
+            const dayAttempts = JSON.parse(localStorage.getItem('dayAttempts') || "{}");
+            const dayCompleted = JSON.parse(localStorage.getItem('dayCompleted') || "{}");
 
-            tasks.forEach(task => {
+            dayData.tasks.forEach(task => {
                 const taskBlock = document.createElement("div");
                 taskBlock.className = "task";
                 taskBlock.id = `task-${task.id}`;
@@ -490,11 +543,11 @@
                 const statusEl = taskBlock.querySelector(`#status-${task.id}`);
                 const errorEl = taskBlock.querySelector(`#error-${task.id}`);
 
-                if (taskCompleted[task.id]) {
+                if (dayCompleted[task.id]) {
                     // Задание уже выполнено
                     statusEl.textContent = "✅ Выполнено";
                     statusEl.className = "task-status task-completed";
-                } else if (taskAttempts[task.id] >= 3) {
+                } else if (dayAttempts[task.id] >= 3) {
                     // Попытки исчерпаны
                     statusEl.textContent = "❌ Вы израсходовали все попытки";
                     statusEl.className = "task-status task-failed";
@@ -506,7 +559,7 @@
                         <input type="text" class="task-input" id="answer-${task.id}" placeholder="Ваш ответ">
                         <button class="task-button" id="submit-${task.id}">Ответить</button>
                         <div class="attempts-counter" id="attempts-${task.id}">
-                            Осталось попыток: ${3 - (taskAttempts[task.id] || 0)}
+                            Осталось попыток: ${3 - (dayAttempts[task.id] || 0)}
                         </div>
                     `;
                     taskBlock.appendChild(inputGroup);
@@ -522,7 +575,7 @@
 
                         if (userAnswer.toLowerCase() === task.a.toLowerCase()) {
                             // Правильный ответ
-                            taskCompleted[task.id] = true;
+                            dayCompleted[task.id] = true;
                             statusEl.textContent = "✅ Выполнено";
                             statusEl.className = "task-status task-completed";
                             
@@ -538,7 +591,7 @@
                             inputGroup.remove();
                         } else {
                             // Неправильный ответ
-                            taskAttempts[task.id] = (taskAttempts[task.id] || 0) + 1;
+                            dayAttempts[task.id] = (dayAttempts[task.id] || 0) + 1;
                             
                             // Показываем сообщение об ошибке
                             errorEl.style.display = "block";
@@ -546,22 +599,22 @@
                                 errorEl.style.display = "none";
                             }, 2000);
                             
-                            if (taskAttempts[task.id] >= 3) {
+                            if (dayAttempts[task.id] >= 3) {
                                 // Попытки закончились
                                 statusEl.textContent = "❌ Вы израсходовали все попытки";
                                 statusEl.className = "task-status task-failed";
                                 inputGroup.remove();
                             } else {
                                 // Обновляем счётчик попыток
-                                attemptsCounter.textContent = `Осталось попыток: ${3 - taskAttempts[task.id]}`;
+                                attemptsCounter.textContent = `Осталось попыток: ${3 - dayAttempts[task.id]}`;
                                 answerInput.value = "";
                                 answerInput.focus();
                             }
                         }
                         
                         // Сохраняем состояние заданий
-                        localStorage.setItem('taskAttempts', JSON.stringify(taskAttempts));
-                        localStorage.setItem('taskCompleted', JSON.stringify(taskCompleted));
+                        localStorage.setItem('dayAttempts', JSON.stringify(dayAttempts));
+                        localStorage.setItem('dayCompleted', JSON.stringify(dayCompleted));
                     });
                 }
 
