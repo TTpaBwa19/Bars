@@ -99,6 +99,7 @@
             color: white;
             font-size: 14px;
             cursor: pointer;
+            padding: 10px;
         }
 
         .menu-item:hover {
@@ -119,7 +120,8 @@
             max-width: 500px;
             z-index: 1000;
             overflow-y: auto;
-            max-height: 80%;
+            max-height: 80vh;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
         }
 
         .modal h2 {
@@ -136,6 +138,7 @@
             color: white;
             cursor: pointer;
             width: 100%;
+            font-weight: bold;
         }
 
         .leaderboard {
@@ -243,6 +246,11 @@
             margin-bottom: 15px;
             font-size: 18px;
             color: #32c4ff;
+        }
+
+        .task-reward {
+            color: gold;
+            margin-bottom: 10px;
         }
     </style>
 </head>
@@ -480,22 +488,18 @@
             "Среда", "Четверг", "Пятница", "Суббота"
         ];
 
-        // Получаем текущий день и задачи
         function getCurrentDayTasks() {
             const today = new Date();
-            const currentDay = today.getDay(); // 0 (воскресенье) до 6 (суббота)
+            const currentDay = today.getDay();
             const currentDate = today.getDate();
             
-            // Проверяем, был ли уже сохранен день
             const savedDay = localStorage.getItem('currentDay');
             const savedDate = localStorage.getItem('currentDate');
             
-            // Если день изменился или это первый запуск
             if (savedDay === null || savedDate === null || 
                 parseInt(savedDay) !== currentDay || 
                 parseInt(savedDate) !== currentDate) {
                 
-                // Сбрасываем прогресс для нового дня
                 localStorage.setItem('currentDay', currentDay);
                 localStorage.setItem('currentDate', currentDate);
                 localStorage.removeItem('dayAttempts');
@@ -512,11 +516,13 @@
         }
 
         function openTask() {
+            console.log("Открытие заданий");
             const dayData = getCurrentDayTasks();
             document.getElementById("day-indicator").textContent = `День: ${dayData.dayName}`;
             renderTasks(dayData);
             document.getElementById("taskListModal").style.display = "block";
             document.getElementById("overlay").style.display = "block";
+            document.body.style.overflow = "hidden";
         }
 
         function renderTasks(dayData) {
@@ -531,7 +537,6 @@
                 taskBlock.className = "task";
                 taskBlock.id = `task-${task.id}`;
 
-                // Основные элементы задания
                 taskBlock.innerHTML = `
                     <p>${task.q}</p>
                     <div class="task-reward">Награда: ${task.reward} монет</div>
@@ -539,20 +544,16 @@
                     <div class="error-message" id="error-${task.id}">Неверный ответ!</div>
                 `;
 
-                // Статус задания
                 const statusEl = taskBlock.querySelector(`#status-${task.id}`);
                 const errorEl = taskBlock.querySelector(`#error-${task.id}`);
 
                 if (dayCompleted[task.id]) {
-                    // Задание уже выполнено
                     statusEl.textContent = "✅ Выполнено";
                     statusEl.className = "task-status task-completed";
                 } else if (dayAttempts[task.id] >= 3) {
-                    // Попытки исчерпаны
                     statusEl.textContent = "❌ Вы израсходовали все попытки";
                     statusEl.className = "task-status task-failed";
                 } else {
-                    // Задание доступно для выполнения
                     const inputGroup = document.createElement("div");
                     inputGroup.className = "task-input-group";
                     inputGroup.innerHTML = `
@@ -564,7 +565,6 @@
                     `;
                     taskBlock.appendChild(inputGroup);
 
-                    // Обработчик отправки ответа
                     const submitBtn = document.getElementById(`submit-${task.id}`);
                     const answerInput = document.getElementById(`answer-${task.id}`);
                     const attemptsCounter = document.getElementById(`attempts-${task.id}`);
@@ -574,45 +574,36 @@
                         if (!userAnswer) return;
 
                         if (userAnswer.toLowerCase() === task.a.toLowerCase()) {
-                            // Правильный ответ
                             dayCompleted[task.id] = true;
                             statusEl.textContent = "✅ Выполнено";
                             statusEl.className = "task-status task-completed";
                             
-                            // Начисляем награду
                             coins += task.reward;
                             document.getElementById("coins").textContent = coins;
                             saveUserData();
                             
-                            // Показываем анимацию
                             showFloatingCoin(`+${task.reward}`);
                             
-                            // Удаляем поля ввода
                             inputGroup.remove();
                         } else {
-                            // Неправильный ответ
                             dayAttempts[task.id] = (dayAttempts[task.id] || 0) + 1;
                             
-                            // Показываем сообщение об ошибке
                             errorEl.style.display = "block";
                             setTimeout(() => {
                                 errorEl.style.display = "none";
                             }, 2000);
                             
                             if (dayAttempts[task.id] >= 3) {
-                                // Попытки закончились
                                 statusEl.textContent = "❌ Вы израсходовали все попытки";
                                 statusEl.className = "task-status task-failed";
                                 inputGroup.remove();
                             } else {
-                                // Обновляем счётчик попыток
                                 attemptsCounter.textContent = `Осталось попыток: ${3 - dayAttempts[task.id]}`;
                                 answerInput.value = "";
                                 answerInput.focus();
                             }
                         }
                         
-                        // Сохраняем состояние заданий
                         localStorage.setItem('dayAttempts', JSON.stringify(dayAttempts));
                         localStorage.setItem('dayCompleted', JSON.stringify(dayCompleted));
                     });
@@ -629,6 +620,7 @@
             if (modal.style.display === "block") {
                 modal.style.display = "none";
                 overlay.style.display = "none";
+                document.body.style.overflow = "";
             } else {
                 fetch("http://127.0.0.1:5000/leaderboard")
                     .then(response => response.json())
@@ -650,6 +642,7 @@
 
                         modal.style.display = "block";
                         overlay.style.display = "block";
+                        document.body.style.overflow = "hidden";
                     })
                     .catch(error => {
                         console.error("Ошибка загрузки рейтинга:", error);
@@ -670,12 +663,20 @@
         function closeLeaderboard() {
             document.getElementById("leaderboardModal").style.display = "none";
             document.getElementById("overlay").style.display = "none";
+            document.body.style.overflow = "";
         }
 
         function closeTaskList() {
             document.getElementById("taskListModal").style.display = "none";
             document.getElementById("overlay").style.display = "none";
+            document.body.style.overflow = "";
         }
+
+        // Обработчик клика по оверлею
+        document.getElementById("overlay").addEventListener("click", function() {
+            closeTaskList();
+            closeLeaderboard();
+        });
     </script>
 </body>
 </html>
