@@ -6,6 +6,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap" rel="stylesheet">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        /* Ваши существующие стили остаются без изменений */
         body {
             margin: 0;
             background: #0f0f1a;
@@ -281,7 +282,7 @@
     </style>
 </head>
 <body>
-    <div class="money">💰 <span id="coins">0</span></div>
+      <div class="money">💰 <span id="coins">0</span></div>
     <div class="username" id="username">Загрузка...</div>
     <div class="rank" id="rank">Bronze | Уровень 1</div>
 
@@ -333,7 +334,7 @@
 
     <script>
         // Конфигурация API
-        const API_BASE_URL = "http://localhost:5000"; // Замените на ваш URL сервера
+        const API_BASE_URL = "http://localhost:5000";
         
         // Основные переменные
         let coins = 0;
@@ -366,7 +367,7 @@
                     updateUsername();
                 }
             } else {
-                // Режим разработки (если не в Telegram WebApp)
+                // Режим разработки
                 user_id = Math.floor(Math.random() * 1000000);
                 username = "Тестовый пользователь";
                 document.getElementById("username").textContent = username;
@@ -446,7 +447,6 @@
         async function loadUserData() {
             showLoader('username', 'Загрузка...');
             
-            // Сначала пробуем загрузить с сервера
             try {
                 const response = await fetch(`${API_BASE_URL}/get_user?user_id=${user_id}`);
                 if (response.ok) {
@@ -456,10 +456,12 @@
                     currentLevel = data.level || 1;
                     levelProgress = data.levelProgress || 0;
                     
+                    // Проверка на завершение уровня
+                    checkLevelCompletion();
+                    
                     updateCoinsDisplay();
                     document.getElementById('username').textContent = username;
                     
-                    // Сохраняем локально на случай оффлайн-режима
                     localStorage.setItem(`user_${user_id}_data`, JSON.stringify(data));
                     localStorage.setItem(`user_${user_id}_username`, username);
                     return;
@@ -468,7 +470,6 @@
                 console.error("Ошибка загрузки данных с сервера:", error);
             }
             
-            // Fallback: загрузка из localStorage
             const savedData = localStorage.getItem(`user_${user_id}_data`);
             if (savedData) {
                 const data = JSON.parse(savedData);
@@ -477,8 +478,24 @@
                 currentLevel = data.level || 1;
                 levelProgress = data.levelProgress || 0;
                 
+                // Проверка на завершение уровня
+                checkLevelCompletion();
+                
                 updateCoinsDisplay();
                 document.getElementById('username').textContent = username;
+            }
+        }
+
+        // Проверка завершения уровня
+        function checkLevelCompletion() {
+            const completedTasks = JSON.parse(localStorage.getItem('completedTasks') || '{}');
+            const currentLevelKey = `level_${currentLevel}`;
+            const completedCount = completedTasks[currentLevelKey]?.length || 0;
+            
+            if (completedCount >= 3) {
+                levelProgress = 0;
+                currentLevel++;
+                saveUserData();
             }
         }
 
@@ -493,11 +510,9 @@
                 last_active: new Date().toISOString()
             };
             
-            // Сохраняем локально для быстрого доступа
             localStorage.setItem(`user_${user_id}_data`, JSON.stringify(userData));
             localStorage.setItem(`user_${user_id}_username`, username);
             
-            // Синхронизируем с сервером
             try {
                 const response = await fetch(`${API_BASE_URL}/update_user`, {
                     method: 'POST',
@@ -521,7 +536,7 @@
             await saveUserData();
         }
 
-     
+    
        const allLevels = [
     // Уровень 1 
     [
@@ -615,8 +630,7 @@
     ]
 ];
 
-        // Получаем текущий уровень и вопросы
-        function getCurrentLevelTasks() {
+         function getCurrentLevelTasks() {
             if (currentLevel > allLevels.length) {
                 return {
                     level: currentLevel,
@@ -625,14 +639,22 @@
                 };
             }
             
+            const completedTasks = JSON.parse(localStorage.getItem('completedTasks') || '{}');
+            const currentLevelKey = `level_${currentLevel}`;
+            const completedCount = completedTasks[currentLevelKey]?.length || 0;
+            
             return {
                 level: currentLevel,
-                tasks: allLevels[currentLevel - 1]
+                tasks: allLevels[currentLevel - 1],
+                completed: completedCount >= 3
             };
         }
 
         // Открытие модального окна с уровнями
         function openLevels() {
+            // Проверяем, нужно ли перейти на следующий уровень
+            checkLevelCompletion();
+            
             const levelData = getCurrentLevelTasks();
             renderLevelTasks(levelData);
             showModal('taskListModal');
@@ -700,39 +722,37 @@
                         const completedTasks = JSON.parse(localStorage.getItem('completedTasks') || '{}');
                         const currentLevelKey = `level_${currentLevel}`;
                         
-                        // Если задание уже выполнено, ничего не делаем
                         if (completedTasks[currentLevelKey]?.includes(task.id)) return;
                         
                         if (answer === correct) {
-                            // Добавляем задание в выполненные
                             if (!completedTasks[currentLevelKey]) {
                                 completedTasks[currentLevelKey] = [];
                             }
                             completedTasks[currentLevelKey].push(task.id);
                             localStorage.setItem('completedTasks', JSON.stringify(completedTasks));
                             
-                            // Начисляем награду
                             coins += task.reward;
                             levelProgress++;
                             
-                            // Проверяем, завершен ли уровень
                             if (levelProgress >= 3) {
                                 levelProgress = 0;
                                 currentLevel++;
                                 
-                                // Проверяем, есть ли следующий уровень
                                 if (currentLevel > allLevels.length) {
                                     alert('Поздравляем! Вы прошли все уровни!');
                                 }
+                                
+                                await saveUserData();
+                                updateLevelDisplay();
+                                renderLevelTasks(getCurrentLevelTasks()); // Обновляем интерфейс
+                                return;
                             }
                             
-                            // Сохраняем прогресс
+                            await saveUserData();
                             updateCoinsDisplay();
                             updateLevelDisplay();
-                            await saveUserData();
                             showFloatingCoin(`+${task.reward}`);
                             
-                            // Немедленно обновляем интерфейс
                             inputGroup.remove();
                             const status = document.createElement('div');
                             status.className = 'task-status task-completed';
@@ -750,7 +770,6 @@
                 container.appendChild(taskEl);
             });
         }
-
         // Рейтинг игроков
         async function toggleLeaderboard() {
             const modal = document.getElementById('leaderboardModal');
