@@ -243,7 +243,7 @@
             z-index: 999;
         }
 
-        .day-indicator {
+        .level-indicator {
             margin-bottom: 15px;
             font-size: 18px;
             color: #32c4ff;
@@ -267,12 +267,23 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+        
+        .level-info {
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        
+        .level-title {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #9e6eff;
+        }
     </style>
 </head>
 <body>
     <div class="money">💰 <span id="coins">0</span></div>
     <div class="username" id="username">Загрузка...</div>
-    <div class="rank">Bronze | Уровень 1</div>
+    <div class="rank" id="rank">Bronze | Уровень 1</div>
 
     <div class="level-bar">
         <div class="level-progress" id="progress"></div>
@@ -292,11 +303,12 @@
                     <th>Место</th>
                     <th>Пользователь</th>
                     <th>Монеты</th>
+                    <th>Уровень</th>
                 </tr>
             </thead>
             <tbody id="leaderboard-body">
                 <tr>
-                    <td colspan="3"><div class="loading"></div> Загрузка...</td>
+                    <td colspan="4"><div class="loading"></div> Загрузка...</td>
                 </tr>
             </tbody>
         </table>
@@ -304,14 +316,18 @@
     </div>
 
     <div class="modal" id="taskListModal">
-        <h2>📚 Задания</h2>
-        <div class="day-indicator" id="day-indicator"></div>
+        <h2>📚 Уровни</h2>
+        <div class="level-info">
+            Текущий уровень: <span id="current-level">1</span><br>
+            Прогресс: <span id="level-progress-text">0/3</span>
+        </div>
+        <div class="level-title" id="level-title">Уровень 1</div>
         <div id="tasks-container"></div>
         <button onclick="closeTaskList()">Закрыть</button>
     </div>
 
     <div class="bottom-menu">
-        <div class="menu-item" id="tasks-btn">📚 Задания</div>
+        <div class="menu-item" id="levels-btn">📚 Уровни</div>
         <div class="menu-item" id="leaderboard-btn">🏆 Рейтинг</div>
     </div>
 
@@ -323,6 +339,8 @@
         let coins = 0;
         let username = "Неизвестно";
         let user_id = null;
+        let currentLevel = 1;
+        let levelProgress = 0;
         const maxEnergy = 1000;
         const currentEnergy = 145;
 
@@ -332,6 +350,7 @@
             setupEventListeners();
             await loadUserData();
             checkUsername();
+            updateLevelDisplay();
         });
 
         // Инициализация Telegram WebApp
@@ -373,7 +392,7 @@
         // Настройка обработчиков событий
         function setupEventListeners() {
             document.getElementById('bars').addEventListener('click', tapHandler);
-            document.getElementById('tasks-btn').addEventListener('click', openTask);
+            document.getElementById('levels-btn').addEventListener('click', openLevels);
             document.getElementById('leaderboard-btn').addEventListener('click', toggleLeaderboard);
             document.getElementById('overlay').addEventListener('click', closeAllModals);
         }
@@ -389,6 +408,29 @@
         // Обновление отображения монет
         function updateCoinsDisplay() {
             document.getElementById('coins').textContent = coins;
+        }
+        
+        // Обновление отображения уровня
+        function updateLevelDisplay() {
+            document.getElementById('current-level').textContent = currentLevel;
+            document.getElementById('level-progress-text').textContent = `${levelProgress}/3`;
+            document.getElementById('level-title').textContent = `Уровень ${currentLevel}`;
+            document.getElementById('rank').textContent = `${getRank(currentLevel)} | Уровень ${currentLevel}`;
+            updateProgressBar();
+        }
+        
+        // Обновление прогресс-бара
+        function updateProgressBar() {
+            const progress = (levelProgress / 3) * 100;
+            document.getElementById('progress').style.width = `${progress}%`;
+        }
+        
+        // Получение ранга по уровню
+        function getRank(level) {
+            if (level < 5) return "Bronze";
+            if (level < 10) return "Silver";
+            if (level < 15) return "Gold";
+            return "Platinum";
         }
 
         // Анимация монетки
@@ -411,6 +453,9 @@
                     const data = await response.json();
                     coins = data.coins || 0;
                     username = data.username || username;
+                    currentLevel = data.level || 1;
+                    levelProgress = data.levelProgress || 0;
+                    
                     updateCoinsDisplay();
                     document.getElementById('username').textContent = username;
                     
@@ -429,6 +474,9 @@
                 const data = JSON.parse(savedData);
                 coins = data.coins || 0;
                 username = data.username || username;
+                currentLevel = data.level || 1;
+                levelProgress = data.levelProgress || 0;
+                
                 updateCoinsDisplay();
                 document.getElementById('username').textContent = username;
             }
@@ -440,6 +488,8 @@
                 user_id,
                 username,
                 coins,
+                level: currentLevel,
+                levelProgress,
                 last_active: new Date().toISOString()
             };
             
@@ -471,102 +521,143 @@
             await saveUserData();
         }
 
-        // Система заданий по дням недели с разными наградами
-        const allTasks = [
-            // Воскресенье (0)
-            [
-                { id: 1, q: "Сколько будет 2 + 2?", a: "4", reward: 10 },
-                { id: 2, q: "5 × 3 = ?", a: "15", reward: 15 },
-                { id: 3, q: "Столица России?", a: "Москва", reward: 20 }
-            ],
-            // Понедельник (1)
-            [
-                { id: 4, q: "Сколько будет 10 / 2?", a: "5", reward: 10 },
-                { id: 5, q: "Год основания Москвы?", a: "1147", reward: 20 },
-                { id: 6, q: "Что такое Python?", a: "Язык программирования", reward: 15 }
-            ],
-            // Вторник (2)
-            [
-                { id: 7, q: "Какая планета самая большая?", a: "Юпитер", reward: 20 },
-                { id: 8, q: "Какой элемент таблицы Менделеева имеет символ H?", a: "Водород", reward: 10 },
-                { id: 9, q: "Какая страна имеет самую большую площадь?", a: "Россия", reward: 15 }
-            ],
-            // Среда (3)
-            [
-                { id: 10, q: "Сколько океанов?", a: "7", reward: 10 },
-                { id: 11, q: "Какая страна в Южной Америке?", a: "Аргентина", reward: 15 },
-                { id: 12, q: "Сколько зубов у взрослого человека?", a: "32", reward: 20 }
-            ],
-            // Четверг (4)
-            [
-                { id: 13, q: "Сколько секунд в минуте?", a: "60", reward: 10 },
-                { id: 14, q: "Что такое HTML?", a: "Язык разметки", reward: 15 },
-                { id: 15, q: "Самый глубокий океан?", a: "Тихий", reward: 20 }
-            ],
-            // Пятница (5)
-            [
-                { id: 16, q: "Что такое алгоритм?", a: "Последовательность шагов", reward: 15 },
-                { id: 17, q: "Какой язык используется для веб-разработки?", a: "JavaScript", reward: 20 },
-                { id: 18, q: "Какой цвет у марса?", a: "Красный", reward: 10 }
-            ],
-            // Суббота (6)
-            [
-                { id: 19, q: "Сколько лет длился Век Просвещения?", a: "100 лет", reward: 15 },
-                { id: 20, q: "Кто написал 'Войну и мир'?", a: "Лев Толстой", reward: 20 },
-                { id: 21, q: "Какая столица Великобритании?", a: "Лондон", reward: 10 }
-            ]
-        ];
+     
+       const allLevels = [
+    // Уровень 1 
+    [
+        { id: 1, q: "Как называется столица Франции?", a: "Париж", reward: 10 },
+        { id: 2, q: "Сколько будет 2 + 2?", a: "4", reward: 10 },
+        { id: 3, q: "Какое животное говорит 'мяу'?", a: "Кошка", reward: 10 }
+    ],
+    // Уровень 2 
+    [
+        { id: 4, q: "Какой цвет получится, если смешать синий и жёлтый?", a: "Зелёный", reward: 15 },
+        { id: 5, q: "Сколько месяцев в году имеют 31 день?", a: "7", reward: 15 },
+        { id: 6, q: "Что тяжелее: 1 кг железа или 1 кг ваты?", a: "Одинаково", reward: 15 }
+    ],
+    // Уровень 3 
+    [
+        { id: 7, q: "Какая самая длинная река в мире?", a: "Нил", reward: 20 },
+        { id: 8, q: "Какое самое глубокое озеро в мире?", a: "Байкал", reward: 20 },
+        { id: 9, q: "Какое животное самое большое на планете?", a: "Синий кит", reward: 20 }
+    ],
+    // Уровень 4 
+    [
+        { id: 10, q: "Как называется прибор для измерения температуры?", a: "Термометр", reward: 25 },
+        { id: 11, q: "Сколько планет в Солнечной системе?", a: "8", reward: 25 },
+        { id: 12, q: "Какой газ нужен растениям для фотосинтеза?", a: "Углекислый газ (CO₂)", reward: 25 }
+    ],
+    // Уровень 5 
+    [
+        { id: 13, q: "Кто написал картину 'Мона Лиза'?", a: "Леонардо да Винчи", reward: 30 },
+        { id: 14, q: "В каком году началась Вторая мировая война?", a: "1939", reward: 30 },
+        { id: 15, q: "Какой язык самый распространённый в мире?", a: "Китайский", reward: 30 }
+    ],
+    // Уровень 6 
+    [
+        { id: 16, q: "Если 5 машин производят 5 деталей за 5 минут, сколько времени нужно 1 машине для 1 детали?", a: "5 минут", reward: 35 },
+        { id: 17, q: "Какое число следующее в последовательности: 2, 4, 8, 16...?", a: "32", reward: 35 },
+        { id: 18, q: "Сколько градусов в прямом угле?", a: "90", reward: 35 }
+    ],
+    // Уровень 7 
+    [
+        { id: 19, q: "Какой орган отвечает за перекачивание крови?", a: "Сердце", reward: 40 },
+        { id: 20, q: "Сколько хромосом у человека?", a: "46", reward: 40 },
+        { id: 21, q: "Какая самая большая кость в теле человека?", a: "Бедренная", reward: 40 }
+    ],
+    // Уровень 8 
+    [
+        { id: 22, q: "Как называется процесс превращения воды в пар?", a: "Испарение", reward: 45 },
+        { id: 23, q: "Какой металл обозначается символом 'Au'?", a: "Золото", reward: 45 },
+        { id: 24, q: "Что измеряется в амперах?", a: "Сила тока", reward: 45 }
+    ],
+    // Уровень 9 
+    [
+        { id: 25, q: "Какой язык используется для стилей веб-страниц?", a: "CSS", reward: 50 },
+        { id: 26, q: "Что означает HTML?", a: "HyperText Markup Language", reward: 50 },
+        { id: 27, q: "Как называется ошибка в программе?", a: "Баг", reward: 50 }
+    ],
+    // Уровень 10 
+    [
+        { id: 28, q: "Кто автор 'Гамлета'?", a: "Шекспир", reward: 55 },
+        { id: 29, q: "Как называется философское учение Конфуция?", a: "Конфуцианство", reward: 55 },
+        { id: 30, q: "В какой стране появился театр кабуки?", a: "Япония", reward: 55 }
+    ],
+    // Уровень 11 
+    [
+        { id: 31, q: "Какая валюта в Японии?", a: "Иена", reward: 60 },
+        { id: 32, q: "Что измеряет ВВП?", a: "Валовой внутренний продукт", reward: 60 },
+        { id: 33, q: "Кто автор 'Капитала'?", a: "Карл Маркс", reward: 60 }
+    ],
+    // Уровень 12 
+    [
+        { id: 34, q: "Какая компания создала iPhone?", a: "Apple", reward: 65 },
+        { id: 35, q: "Что такое блокчейн?", a: "Технология распределённого реестра", reward: 65 },
+        { id: 36, q: "Как зовут основателя SpaceX?", a: "Илон Маск", reward: 65 }
+    ],
+    // Уровень 13 
+    [
+        { id: 37, q: "Сколько букв в русском алфавите?", a: "33", reward: 70 },
+        { id: 38, q: "Какой язык самый сложный для изучения?", a: "Китайский / Арабский (варианты)", reward: 70 },
+        { id: 39, q: "От какого языка произошёл английский?", a: "От древнегерманских языков", reward: 70 }
+    ],
+    // Уровень 14 
+    [
+        { id: 40, q: "Кто автор теории психоанализа?", a: "Фрейд", reward: 75 },
+        { id: 41, q: "Что изучает когнитивная психология?", a: "Мышление и восприятие", reward: 75 },
+        { id: 42, q: "Как называется боязнь высоты?", a: "Акрофобия", reward: 75 }
+    ],
+    // Уровень 15 
+    [
+        { id: 43, q: "Какой учёный открыл закон всемирного тяготения?", a: "Ньютон", reward: 100 },
+        { id: 44, q: "Как называется задача разложения числа на простые множители?", a: "Факторизация", reward: 100 },
+        { id: 45, q: "Как называется главный принцип дзен-буддизма?", a: "Просветление (сатори)", reward: 100 }
+    ]
+];
 
-        const dayNames = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
-
-        // Получаем текущий день и задачи
-        function getCurrentDayTasks() {
-            const today = new Date();
-            const currentDay = today.getDay();
-            const currentDate = today.getDate();
-            
-            const savedDay = localStorage.getItem('currentDay');
-            const savedDate = localStorage.getItem('currentDate');
-            
-            if (savedDay === null || savedDate === null || 
-                parseInt(savedDay) !== currentDay || 
-                parseInt(savedDate) !== currentDate) {
-                
-                localStorage.setItem('currentDay', currentDay);
-                localStorage.setItem('currentDate', currentDate);
-                localStorage.removeItem('taskProgress');
-                
-                console.log("Новый день, задачи сброшены");
+        // Получаем текущий уровень и вопросы
+        function getCurrentLevelTasks() {
+            if (currentLevel > allLevels.length) {
+                return {
+                    level: currentLevel,
+                    tasks: [],
+                    completed: true
+                };
             }
             
             return {
-                day: currentDay,
-                dayName: dayNames[currentDay],
-                tasks: allTasks[currentDay]
+                level: currentLevel,
+                tasks: allLevels[currentLevel - 1]
             };
         }
 
-        // Открытие модального окна с заданиями
-        function openTask() {
-            const dayData = getCurrentDayTasks();
-            document.getElementById('day-indicator').textContent = `День: ${dayData.dayName}`;
-            renderTasks(dayData);
+        // Открытие модального окна с уровнями
+        function openLevels() {
+            const levelData = getCurrentLevelTasks();
+            renderLevelTasks(levelData);
             showModal('taskListModal');
         }
 
-        // Отрисовка заданий
-        function renderTasks(dayData) {
+        // Отрисовка заданий уровня
+        function renderLevelTasks(levelData) {
             const container = document.getElementById('tasks-container');
             container.innerHTML = '';
             
-            const taskProgress = JSON.parse(localStorage.getItem('taskProgress') || '{}');
+            if (levelData.completed) {
+                container.innerHTML = '<p>Поздравляем! Вы прошли все уровни!</p>';
+                return;
+            }
 
-            dayData.tasks.forEach(task => {
+            const completedTasks = JSON.parse(localStorage.getItem('completedTasks') || '{}');
+            const currentLevelKey = `level_${currentLevel}`;
+            const levelCompletedTasks = completedTasks[currentLevelKey] || [];
+
+            levelData.tasks.forEach(task => {
                 const taskEl = document.createElement('div');
                 taskEl.className = 'task';
                 taskEl.id = `task-${task.id}`;
 
-                const progress = taskProgress[task.id] || { attempts: 0, completed: false, failed: false };
+                const isCompleted = levelCompletedTasks.includes(task.id);
 
                 const questionEl = document.createElement('p');
                 questionEl.textContent = task.q;
@@ -577,15 +668,10 @@
                 rewardEl.textContent = `Награда: ${task.reward} монет`;
                 taskEl.appendChild(rewardEl);
 
-                if (progress.completed) {
+                if (isCompleted) {
                     const status = document.createElement('div');
                     status.className = 'task-status task-completed';
                     status.textContent = '✅ Выполнено';
-                    taskEl.appendChild(status);
-                } else if (progress.failed) {
-                    const status = document.createElement('div');
-                    status.className = 'task-status task-failed';
-                    status.textContent = '❌ Попытки исчерпаны';
                     taskEl.appendChild(status);
                 } else {
                     const inputGroup = document.createElement('div');
@@ -610,17 +696,39 @@
                     button.addEventListener('click', async () => {
                         const answer = input.value.trim().toLowerCase();
                         const correct = task.a.toLowerCase();
-                        let newProgress = JSON.parse(localStorage.getItem('taskProgress') || '{}');
+                        
+                        const completedTasks = JSON.parse(localStorage.getItem('completedTasks') || '{}');
+                        const currentLevelKey = `level_${currentLevel}`;
                         
                         // Если задание уже выполнено, ничего не делаем
-                        if (newProgress[task.id]?.completed) return;
+                        if (completedTasks[currentLevelKey]?.includes(task.id)) return;
                         
-                        newProgress[task.id] = newProgress[task.id] || { attempts: 0, completed: false };
-
                         if (answer === correct) {
-                            newProgress[task.id].completed = true;
+                            // Добавляем задание в выполненные
+                            if (!completedTasks[currentLevelKey]) {
+                                completedTasks[currentLevelKey] = [];
+                            }
+                            completedTasks[currentLevelKey].push(task.id);
+                            localStorage.setItem('completedTasks', JSON.stringify(completedTasks));
+                            
+                            // Начисляем награду
                             coins += task.reward;
+                            levelProgress++;
+                            
+                            // Проверяем, завершен ли уровень
+                            if (levelProgress >= 3) {
+                                levelProgress = 0;
+                                currentLevel++;
+                                
+                                // Проверяем, есть ли следующий уровень
+                                if (currentLevel > allLevels.length) {
+                                    alert('Поздравляем! Вы прошли все уровни!');
+                                }
+                            }
+                            
+                            // Сохраняем прогресс
                             updateCoinsDisplay();
+                            updateLevelDisplay();
                             await saveUserData();
                             showFloatingCoin(`+${task.reward}`);
                             
@@ -631,21 +739,9 @@
                             status.textContent = '✅ Выполнено';
                             taskEl.appendChild(status);
                         } else {
-                            newProgress[task.id].attempts += 1;
-                            if (newProgress[task.id].attempts >= 3) {
-                                newProgress[task.id].failed = true;
-                                inputGroup.remove();
-                                const status = document.createElement('div');
-                                status.className = 'task-status task-failed';
-                                status.textContent = '❌ Попытки исчерпаны';
-                                taskEl.appendChild(status);
-                            } else {
-                                error.textContent = `❌ Неправильно. Осталось попыток: ${3 - newProgress[task.id].attempts}`;
-                                error.style.display = 'block';
-                            }
+                            error.textContent = '❌ Неправильно. Попробуйте ещё раз!';
+                            error.style.display = 'block';
                         }
-
-                        localStorage.setItem('taskProgress', JSON.stringify(newProgress));
                     });
 
                     taskEl.appendChild(inputGroup);
@@ -686,7 +782,7 @@
             tbody.innerHTML = '';
             
             if (leaderboardData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3">Нет данных о рейтинге</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4">Нет данных о рейтинге</td></tr>';
                 return;
             }
             
@@ -697,6 +793,7 @@
                     <td>${medal}</td>
                     <td>${user.username || `Пользователь ${user.user_id}`}</td>
                     <td>${user.coins || 0}</td>
+                    <td>${user.level || 1}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -712,12 +809,18 @@
                     leaderboardData.push({
                         user_id: userData.user_id,
                         username: userData.username,
-                        coins: userData.coins || 0
+                        coins: userData.coins || 0,
+                        level: userData.level || 1
                     });
                 }
             }
             
-            leaderboardData.sort((a, b) => (b.coins || 0) - (a.coins || 0));
+            leaderboardData.sort((a, b) => {
+                // Сначала сортируем по уровню, затем по монетам
+                if (b.level !== a.level) return b.level - a.level;
+                return (b.coins || 0) - (a.coins || 0);
+            });
+            
             renderLeaderboard(leaderboardData);
         }
 
